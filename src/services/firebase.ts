@@ -10,7 +10,8 @@ import {
   setDoc,
   writeBatch,
   orderBy,
-  limit
+  limit,
+  updateDoc
 } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 
@@ -123,3 +124,15 @@ export const getLatestVideosFromAllChannels = async (): Promise<YouTubeVideo[]> 
     new Date(b.snippet.publishedAt).getTime() - new Date(a.snippet.publishedAt).getTime()
   );
 };
+
+// // Add this to services/firebase.ts
+// export const updateVideoStatus = async (channelId: string, videoId: string, status: string) => {
+//   const userId = auth.currentUser?.uid;
+//   if (!userId) return;
+
+//   const docRef = doc(db, `users/${userId}/saved_channels/${channelId}/videos`, videoId);
+//   await updateDoc(docRef, {
+//     watchStatus: status,
+//     updatedAt: Date.now()
+//   });
+// };

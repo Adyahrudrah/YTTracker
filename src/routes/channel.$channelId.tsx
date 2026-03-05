@@ -149,7 +149,7 @@ function ChannelVideosPage() {
       {/* Grid Display */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {allVideos.sort((a,b)=> parseInt(b.snippet.publishedAt) - parseInt(a.snippet.publishedAt)).map((video) => (
-        <VideoCard video={video} key={video.id.videoId}/>
+        <VideoCard video={video}  key={video.id.videoId}/>
         ))}
       </div>
 

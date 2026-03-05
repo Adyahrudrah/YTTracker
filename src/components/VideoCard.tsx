@@ -13,8 +13,7 @@ function VideoCard({ video }: VideoCardProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleStatusUpdate = async (status: string) => {
-    // Here you can call a Firebase function to save progress
-    // e.g., updateDoc(docRef, { status, lastWatched: Date.now() })
+    console.log(status)
   };
 
   return (
