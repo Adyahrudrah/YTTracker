@@ -52,7 +52,7 @@ function App() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {latestVideos.map((video) => (
-                  <VideoCard video={video} key={video.id.videoId}/>
+                  <VideoCard video={video}   key={video.id.videoId}/>
 
           ))}
         </div>

@@ -11,7 +11,6 @@ import {
   writeBatch,
   orderBy,
   limit,
-  updateDoc
 } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 
