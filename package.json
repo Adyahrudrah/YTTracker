@@ -4,16 +4,16 @@
   "type": "module",
   "imports": {
     "#/*": "./src/*"
-  },
-  "scripts": {
-    "dev": "vite dev --port 3000",
-    "build": "vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "format": "biome format",
-    "lint": "biome lint",
-    "check": "biome check"
-  },
+  },"scripts": {
+  "dev": "vinxi dev",
+  "build": "vinxi build",
+  "start": "vinxi start",
+  "preview": "vinxi start",
+  "test": "vitest run",
+  "format": "biome format",
+  "lint": "biome lint",
+  "check": "biome check"
+},
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "^0.7.0",
