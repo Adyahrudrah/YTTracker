@@ -123,14 +123,14 @@ function VideoCard({ video }: VideoCardProps) {
       </DialogTrigger>
 
       <DialogContent
-        className="max-w-4xl p-0 bg-black border-none overflow-hidden sm:rounded-2xl"
+        className="p-0 bg-black md:min-w-4xl  border-none overflow-hidden sm:rounded-2xl"
         aria-description={snippet.title}
       >
         <DialogTitle>
           <p className="text-transparent">{snippet.title}</p>
         </DialogTitle>
         {isOpen && (
-          <div className="aspect-video w-full">
+          <div className="aspect-video w-full h-full">
             <VideoPlayer
               videoId={snippet.resourceId.videoId}
               onProgress={handleProgress}

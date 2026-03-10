@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getLatestVideosFromAllChannels, auth } from "../services/firebase";
 import { useState, useEffect } from "react";
@@ -9,27 +9,36 @@ import VideoCard from "#/components/VideoCard";
 export const Route = createFileRoute("/")({ component: App });
 
 function App() {
+  const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(
     auth.currentUser?.uid || null,
   );
+  const [authLoading, setAuthLoading] = useState(!auth.currentUser);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUserId(user?.uid || null);
+      if (!user) {
+        navigate({ to: "/login" });
+      } else {
+        setUserId(user.uid);
+      }
+      setAuthLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [navigate]);
 
-  const { data: latestVideos, isLoading } = useQuery({
+  const { data: latestVideos, isLoading: isQueryLoading } = useQuery({
     queryKey: ["root-latest-videos", userId],
     queryFn: getLatestVideosFromAllChannels,
     enabled: !!userId,
   });
 
+  const isLoading = authLoading || isQueryLoading;
+
   if (isLoading) {
     return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-900" />
       </div>
     );
   }

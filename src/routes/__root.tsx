@@ -3,13 +3,13 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { TanStackDevtools } from "@tanstack/react-devtools";
+// import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+// import { TanStackDevtools } from "@tanstack/react-devtools";
 import Header from "../components/Header";
 
 import TanStackQueryProvider from "../integrations/tanstack-query/root-provider";
 
-import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
+// import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
 import appCss from "../styles.css?url";
 
@@ -58,7 +58,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <TanStackQueryProvider>
           <Header />
           {children}
-          <TanStackDevtools
+          {/* <TanStackDevtools
             config={{
               position: "bottom-right",
             }}
@@ -69,7 +69,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               },
               TanStackQueryDevtools,
             ]}
-          />
+          /> */}
         </TanStackQueryProvider>
         <Toaster position="top-center" richColors theme="dark" />
         <Scripts />

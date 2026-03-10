@@ -83,8 +83,8 @@ export function VideoPlayer({
     width: "100%",
     playerVars: {
       autoplay: 1,
-      start: Math.floor(startTime), // Starts video at this second
-      rel: 0, // Don't show related videos from other channels
+      start: Math.floor(startTime),
+      rel: 0,
     },
   };
 
