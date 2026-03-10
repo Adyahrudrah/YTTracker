@@ -1,12 +1,30 @@
 {
   "name": "YTTracker",
+  "id": "/",
   "short_name": "YTT",
   "description": "YouTube Redefined for Education",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#000000",
+  "orientation": "portrait",
   "theme_color": "#000000",
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop Feed View"
+    },
+    {
+      "src": "/screenshots/mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile Feed View"
+    }
+  ],
   "icons": [
     {
       "src": "icons/icon-48x48.png",
