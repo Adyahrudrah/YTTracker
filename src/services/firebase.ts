@@ -13,6 +13,8 @@ import {
   limit,
   getDoc,
   updateDoc,
+  collectionGroup,
+  where,
 } from "firebase/firestore";
 import {
   getAuth,
@@ -90,6 +92,7 @@ export const saveVideosToChannel = async (
     );
     batch.set(docRef, {
       ...video,
+      userId,
       savedAt: Date.now(),
     });
   });
@@ -126,7 +129,7 @@ export const isChannelExist = async (channelId: string): Promise<boolean> => {
 export const getLatestVideosFromAllChannels = async (): Promise<YTVideo[]> => {
   const userId = auth.currentUser?.uid;
   if (!userId) return [];
-
+  await getWatchingVideos();
   // 1. Get all saved channels
   const channelsRef = collection(db, `users/${userId}/saved_channels`);
   const channelsSnap = await getDocs(channelsRef);
@@ -181,4 +184,22 @@ export const updateVideoProgress = async (
   } catch (error) {
     console.error("Error saving video progress:", error);
   }
+};
+
+export const getWatchingVideos = async (): Promise<YTVideo[]> => {
+  const userId = auth.currentUser?.uid;
+  if (!userId) return [];
+
+  const videosRef = collectionGroup(db, "videos");
+
+  const q = query(
+    videosRef,
+    where("userId", "==", userId),
+    where("details.progressPercent", ">", 0),
+    where("details.progressPercent", "<", 100),
+    orderBy("details.updatedAt", "desc"),
+  );
+
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map((doc) => doc.data() as YTVideo);
 };

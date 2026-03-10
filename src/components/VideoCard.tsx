@@ -39,7 +39,7 @@ function VideoCard({ video }: VideoCardProps) {
 
       toast.info(`Saved progress: ${currentProgress.percent}%`);
       queryClient.invalidateQueries({ queryKey: ["saved-videos"] });
-      queryClient.invalidateQueries({ queryKey: ["root-latest-videos"] });
+      queryClient.invalidateQueries({ queryKey: ["videos-inprogress"] });
     }
   };
 

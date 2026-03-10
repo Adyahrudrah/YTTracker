@@ -1,6 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { getLatestVideosFromAllChannels, auth } from "../services/firebase";
+import {
+  getLatestVideosFromAllChannels,
+  auth,
+  getWatchingVideos,
+} from "../services/firebase";
 import { useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { Loader2, Tv } from "lucide-react";
@@ -27,10 +31,11 @@ function App() {
     return () => unsubscribe();
   }, [navigate]);
 
-  const { data: latestVideos, isLoading: isQueryLoading } = useQuery({
-    queryKey: ["root-latest-videos", userId],
-    queryFn: getLatestVideosFromAllChannels,
+  const { data: videosInProgess, isLoading: isQueryLoading } = useQuery({
+    queryKey: ["videos-inprogress", userId],
+    queryFn: getWatchingVideos,
     enabled: !!userId,
+    refetchOnWindowFocus: false,
   });
 
   const isLoading = authLoading || isQueryLoading;
@@ -57,7 +62,7 @@ function App() {
         <Tv className="h-8 w-8 text-blue-600 opacity-20" />
       </div>
 
-      {!latestVideos || latestVideos.length === 0 ? (
+      {!videosInProgess || videosInProgess.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-muted/30 rounded-2xl border-2 border-dashed p-6">
           <p className="text-muted-foreground">
             No videos found. Save some channels to see your feed!
@@ -71,8 +76,8 @@ function App() {
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {latestVideos.map((video) => (
-            <VideoCard video={video} key={video.id} />
+          {videosInProgess.map((video) => (
+            <VideoCard video={video} key={video.snippet.resourceId.videoId} />
           ))}
         </div>
       )}
