@@ -10,10 +10,9 @@ import { Button } from "@/components/ui/button";
 import {
   Loader2,
   RefreshCw,
-  CheckCircle2,
-  AlertCircle,
   Smartphone,
   PlayCircle,
+  SortAsc,
 } from "lucide-react";
 import { useMemo, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -27,11 +26,21 @@ import {
 import type { YTVideo } from "#/types/yt";
 import { VideoCardSkeleton } from "#/components/ui/skeletons.tsx/dd";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "#/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { parseISO8601ToSeconds } from "#/utils/base";
 
 export const Route = createFileRoute("/channel/$channelId")({
   validateSearch: (search) => search,
   component: ChannelVideosPage,
 });
+
+type SortOption = "time" | "views" | "duration";
 
 function ChannelVideosPage() {
   const { channelId } = Route.useParams();
@@ -39,14 +48,14 @@ function ChannelVideosPage() {
   const queryClient = useQueryClient();
   const queryKey = ["channel-videos", channelId, userId];
 
+  const [sortBy, setSortBy] = useState<SortOption>("time");
+  const [shouldLoadAll, setShouldLoadAll] = useState(false);
+
   const { data: isSaved } = useQuery({
     queryKey: ["saved-channel", channelId],
     queryFn: () => isChannelExist(channelId),
     enabled: !!userId,
   });
-
-  // Logic control: Should we continue fetching all pages?
-  const [shouldLoadAll, setShouldLoadAll] = useState(false);
 
   const { data: savedVideos, isLoading: isLoadingSaved } = useQuery({
     queryKey: ["saved-videos", channelId],
@@ -67,30 +76,47 @@ function ChannelVideosPage() {
       enabled: !!userId && isFirebaseEmpty,
     });
 
-  // Effect to handle the recursive loading ONLY if shouldLoadAll is true
   useEffect(() => {
     if (hasNextPage && !isFetchingNextPage && shouldLoadAll) {
       fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage, shouldLoadAll]);
 
-  // Fixed TS error by using .getTime() and prevents mutation with spread
-  const sortByTime = (videos: YTVideo[]) =>
-    [...videos].sort(
-      (a, b) =>
-        new Date(b.snippet.publishedAt).getTime() -
-        new Date(a.snippet.publishedAt).getTime(),
-    );
+  const sortVideos = (videos: YTVideo[], criterion: SortOption) => {
+    const items = [...videos];
+    switch (criterion) {
+      case "views":
+        return items.sort(
+          (a, b) =>
+            Number(b.details?.viewCount || 0) -
+            Number(a.details?.viewCount || 0),
+        );
+      case "duration":
+        return items.sort(
+          (a, b) =>
+            (parseISO8601ToSeconds(b.details?.duration) || 0) -
+            (parseISO8601ToSeconds(a.details?.duration) || 0),
+        );
+      case "time":
+      default:
+        return items.sort(
+          (a, b) =>
+            new Date(b.snippet.publishedAt).getTime() -
+            new Date(a.snippet.publishedAt).getTime(),
+        );
+    }
+  };
 
   const allVideos = useMemo(() => {
+    let baseVideos: YTVideo[] = [];
     if (savedVideos && savedVideos.length > 0) {
-      return sortByTime(savedVideos);
+      baseVideos = savedVideos;
+    } else {
+      baseVideos = data?.pages.flatMap((page) => page.videos) || [];
     }
-    const flattened = data?.pages.flatMap((page) => page.videos) || [];
-    return sortByTime(flattened);
-  }, [data, savedVideos]);
+    return sortVideos(baseVideos, sortBy);
+  }, [data, savedVideos, sortBy]);
 
-  // Auto-save to Firebase once the loading is completely finished
   useEffect(() => {
     if (
       allVideos.length > 0 &&
@@ -166,9 +192,7 @@ function ChannelVideosPage() {
           <div className="h-10 w-48 rounded bg-muted animate-pulse" />
           <div className="h-5 w-32 rounded bg-muted animate-pulse" />
         </header>
-
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {/* Render 8-12 skeletons to fill the screen */}
           {Array.from({ length: 12 }).map((_, i) => (
             <VideoCardSkeleton key={i} />
           ))}
@@ -179,7 +203,7 @@ function ChannelVideosPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <header className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 border-b pb-6">
+      <header className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 border-b pb-8">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight">Channel Feed</h1>
           <div className="flex items-center gap-3">
@@ -203,8 +227,8 @@ function ChannelVideosPage() {
         </Button>
       </header>
 
-      <Tabs defaultValue="videos" className="w-full space-y-6">
-        <div className="flex items-center justify-between">
+      <Tabs defaultValue="videos" className="w-full">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <TabsList className="grid w-full max-w-100 grid-cols-2">
             <TabsTrigger value="videos" className="flex items-center gap-2">
               <PlayCircle className="h-4 w-4" />
@@ -221,6 +245,23 @@ function ChannelVideosPage() {
               </span>
             </TabsTrigger>
           </TabsList>
+
+          <div className="flex justify-between w-full items-center gap-2 sm:w-auto">
+            <SortAsc className="h-4 w-4 text-muted-foreground" /> SortBy
+            <Select
+              value={sortBy}
+              onValueChange={(value) => setSortBy(value as SortOption)}
+            >
+              <SelectTrigger className="w-45">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="time">Most Recent</SelectItem>
+                <SelectItem value="views">Most Views</SelectItem>
+                <SelectItem value="duration">Longest Duration</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <TabsContent value="videos" className="border-none p-0 outline-none">
@@ -258,8 +299,8 @@ function ChannelVideosPage() {
         </TabsContent>
       </Tabs>
 
-      <footer className="mt-16 flex flex-col items-center py-10 border-t">
-        {hasNextPage ? (
+      <footer className="flex flex-col items-center mt-12">
+        {hasNextPage && (
           <div className="w-full max-w-md">
             {shouldLoadAll ? (
               <div className="flex flex-col items-center space-y-4">
@@ -269,31 +310,13 @@ function ChannelVideosPage() {
                 </p>
               </div>
             ) : (
-              <div className="bg-muted/30 border border-dashed rounded-xl p-8 text-center space-y-4">
-                <div className="flex justify-center">
-                  <AlertCircle className="h-10 w-10 text-muted-foreground/60" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-lg">Load full history?</h3>
-                  <p className="text-sm text-muted-foreground">
-                    We've loaded the first batch. Click below to fetch every
-                    video from this channel and sync them to your database.
-                  </p>
-                </div>
+              <div className="w-full flex justify-center">
                 <Button onClick={() => setShouldLoadAll(true)} className="px-8">
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Sync All Videos
                 </Button>
               </div>
             )}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center text-center space-y-2">
-            <CheckCircle2 className="h-8 w-8 text-green-500" />
-            <p className="font-medium">Sync Complete</p>
-            <p className="text-xs text-muted-foreground">
-              All available videos are now stored and sorted.
-            </p>
           </div>
         )}
       </footer>
