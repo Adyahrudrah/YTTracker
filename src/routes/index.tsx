@@ -1,62 +1,72 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
-import { getLatestVideosFromAllChannels, auth } from '../services/firebase'
-import { useState, useEffect } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
-import {  Loader2, Tv } from 'lucide-react'
-import VideoCard from '#/components/VideoCard'
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { getLatestVideosFromAllChannels, auth } from "../services/firebase";
+import { useState, useEffect } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { Loader2, Tv } from "lucide-react";
+import VideoCard from "#/components/VideoCard";
 
-export const Route = createFileRoute('/')({ component: App })
+export const Route = createFileRoute("/")({ component: App });
 
 function App() {
-  const [userId, setUserId] = useState<string | null>(auth.currentUser?.uid || null)
+  const [userId, setUserId] = useState<string | null>(
+    auth.currentUser?.uid || null,
+  );
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUserId(user?.uid || null)
-    })
-    return () => unsubscribe()
-  }, [])
+      setUserId(user?.uid || null);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const { data: latestVideos, isLoading } = useQuery({
-    queryKey: ['root-latest-videos', userId],
+    queryKey: ["root-latest-videos", userId],
     queryFn: getLatestVideosFromAllChannels,
     enabled: !!userId,
-  })
+  });
 
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    )
+    );
   }
 
   return (
     <main className="page-wrap px-4 pb-8 pt-14 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Feed</h1>
-          <p className="text-muted-foreground mt-1">Latest updates from your saved channels</p>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            Feed
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Latest updates from your saved channels
+          </p>
         </div>
         <Tv className="h-8 w-8 text-blue-600 opacity-20" />
       </div>
 
       {!latestVideos || latestVideos.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-muted/30 rounded-2xl border-2 border-dashed">
-          <p className="text-muted-foreground">No videos found. Save some channels to see your feed!</p>
-          <Link to="/search" className="mt-4 text-blue-600 font-medium hover:underline">
+        <div className="flex flex-col items-center justify-center py-20 bg-muted/30 rounded-2xl border-2 border-dashed p-6">
+          <p className="text-muted-foreground">
+            No videos found. Save some channels to see your feed!
+          </p>
+          <Link
+            to="/search"
+            className="mt-4 text-blue-600 font-medium hover:underline"
+          >
             Go to Search →
           </Link>
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {latestVideos.map((video) => (
-                  <VideoCard video={video}   key={video.id.videoId}/>
-
+            <VideoCard video={video} key={video.id} />
           ))}
         </div>
       )}
     </main>
-  )
+  );
 }

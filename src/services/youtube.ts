@@ -1,84 +1,128 @@
-// services/youtube.ts
+import type {
+  VideoResponse,
+  YTChannel,
+  YTChannelIdsResponse,
+  YTVideo,
+  YTVideoContentResponse,
+} from "#/types/yt";
+import { parseISO8601ToSeconds } from "#/utils/base";
+
 const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const BASE_URL = "https://www.googleapis.com/youtube/v3";
 
-export interface YouTubeChannel {
-  id: string;
-  snippet: {
-    title: string;
-    description: string;
-    thumbnails: { medium: { url: string } };
-  };
-  statistics: {
-    subscriberCount: string;
-    videoCount: string;
-  };
-}
+const yt_api = async (
+  path: string,
+  params: Record<string, string | undefined> = {},
+) => {
+  const url = new URL(`${BASE_URL}${path}`);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) url.searchParams.append(key, value);
+  });
+  url.searchParams.append("key", YOUTUBE_API_KEY);
 
-export const fetchChannels = async (query: string): Promise<YouTubeChannel[]> => {
+  const res = await fetch(url.href);
+  return res.json();
+};
+
+export const yt = {
+  getChannelIds: (q: string): Promise<YTChannelIdsResponse> =>
+    yt_api("/search", {
+      part: "snippet",
+      type: "channel",
+      maxResults: "50",
+      q,
+    }),
+
+  getChannelStats: (channelIds: string): Promise<{ items: YTChannel[] }> =>
+    yt_api("/channels", { part: "snippet,statistics", id: channelIds }),
+
+  getPlaylistItems: (playlistId: string, pageToken?: string) =>
+    yt_api("/playlistItems", {
+      playlistId,
+      part: "snippet,contentDetails",
+      maxResults: "50",
+      pageToken,
+    }),
+
+  getVideoDetails: (videoIds: string): Promise<YTVideoContentResponse> =>
+    yt_api("/videos", { part: "contentDetails,statistics", id: videoIds }),
+};
+
+export const fetchChannels = async (query: string): Promise<YTChannel[]> => {
   if (!query) return [];
-  
-  const searchRes = await fetch(
-    `${BASE_URL}/search?part=snippet&type=channel&maxResults=50&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`
-  );
-  const searchData = await searchRes.json();
-  const channelIds = searchData.items?.map((item: any) => item.id.channelId).join(',');
+
+  const searchData = await yt.getChannelIds(query);
+  const channelIds = searchData.items
+    ?.map((i) => i.id.channelId)
+    .filter(Boolean)
+    .join(",");
 
   if (!channelIds) return [];
 
-  const statsRes = await fetch(
-    `${BASE_URL}/channels?part=snippet,statistics&id=${channelIds}&key=${YOUTUBE_API_KEY}`
+  const statsData = await yt.getChannelStats(channelIds);
+  const channels = statsData.items || [];
+
+  return channels.sort(
+    (a, b) =>
+      (parseInt(b.statistics.subscriberCount) || 0) -
+      (parseInt(a.statistics.subscriberCount) || 0),
   );
-  const statsData = await statsRes.json();
-
-  const channels: YouTubeChannel[] = statsData.items;
-
-  // Sort channels by subscriberCount (highest to lowest)
-  return channels.sort((a, b) => {
-    const subsA = parseInt(a.statistics.subscriberCount) || 0;
-    const subsB = parseInt(b.statistics.subscriberCount) || 0;
-    return subsB - subsA;
-  });
 };
-
-export const formatSubscribers = (count: string) => {
-  const num = parseInt(count);
-  if (isNaN(num)) return "0";
-  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-  return num.toString();
-};
-
-export interface YouTubeVideo {
-  id: { videoId: string };
-  snippet: {
-    title: string;
-    description: string;
-    thumbnails: { medium: { url: string } };
-    publishedAt: string;
-  };
-}
-
-export interface VideoResponse {
-  videos: YouTubeVideo[];
-  nextPageToken?: string;
-}
 
 export const fetchChannelVideos = async (
-  channelId: string, 
+  channelId: string,
   pageToken?: string,
-  publishedAfter?: string // New parameter
+  sinceDate?: Date,
 ): Promise<VideoResponse> => {
-  const pageParam = pageToken ? `&pageToken=${pageToken}` : '';
-  const dateParam = publishedAfter ? `&publishedAfter=${publishedAfter}` : '';
-  
-  const url = `${BASE_URL}/search?part=snippet&channelId=${channelId}&maxResults=50&order=date&type=video${pageParam}${dateParam}&key=${YOUTUBE_API_KEY}`;
-  
-  const res = await fetch(url);
-  const data = await res.json();
-  
+  const uploadsId = channelId.replace(/^UC/, "UU");
+  const data = await yt.getPlaylistItems(uploadsId, pageToken);
+
+  const videoIds = data.items
+    .map((v: YTVideo) => v.snippet.resourceId.videoId)
+    .join(",");
+  const contentDetails: YTVideoContentResponse =
+    await yt.getVideoDetails(videoIds);
+
+  const detailsMap = new Map(
+    contentDetails.items.map((item) => {
+      const seconds = parseISO8601ToSeconds(item.contentDetails.duration);
+      return [
+        item.id,
+        {
+          isShorts: seconds > 0 && seconds <= 60,
+          duration: item.contentDetails.duration,
+          viewCount: item.statistics.viewCount,
+        },
+      ];
+    }),
+  );
+
+  let videos: YTVideo[] = (data.items || []).map((item: YTVideo) => ({
+    id: { videoId: item.snippet.resourceId.videoId },
+    snippet: item.snippet,
+    details: detailsMap.get(item.snippet.resourceId.videoId),
+  }));
+
+  console.log(videos);
+
+  let reachedKnownVideo = false;
+
+  if (sinceDate) {
+    const sinceTime = sinceDate.getTime();
+    const cutoffIndex = videos.findIndex(
+      (v) => new Date(v.snippet.publishedAt).getTime() <= sinceTime,
+    );
+
+    if (cutoffIndex !== -1) {
+      videos = videos.slice(0, cutoffIndex);
+      reachedKnownVideo = true;
+    }
+  }
+
   return {
-    videos: data.items || [],
+    videos,
     nextPageToken: data.nextPageToken,
+    prevPageToken: data.prevPageToken,
+    reachedKnownVideo,
   };
 };

@@ -1,30 +1,18 @@
-import { useNavigate, Link } from '@tanstack/react-router'
-import { 
-  LogOut, 
-  User as UserIcon, 
-  Menu, 
-  History, 
-  Bookmark 
-} from 'lucide-react'
-import { type User } from 'firebase/auth'
-import { logout } from '#/services/firebase'
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useNavigate, Link } from "@tanstack/react-router";
+import { User as UserIcon, Menu, History, Bookmark } from "lucide-react";
+import { type User } from "firebase/auth";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
 
 export default function MobileAside({ user }: { user: User | null }) {
-  const navigate = useNavigate()
-
-  const handleLogout = async () => {
-    await logout()
-    navigate({ to: '/login' })
-  }
+  const navigate = useNavigate();
 
   return (
     <Sheet>
@@ -34,10 +22,13 @@ export default function MobileAside({ user }: { user: User | null }) {
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-75 sm:w-100">
-        <SheetHeader className="text-left pb-6 border-b">
-          <SheetTitle className="flex items-center gap-3">
+        <SheetHeader className="text-left pb-6 border-b hover:bg-background/30 cursor-pointer">
+          <SheetTitle
+            className="flex items-center gap-3"
+            onClick={() => navigate({ to: "/login" })}
+          >
             <Avatar className="h-10 w-10 border">
-              <AvatarImage src={user?.photoURL || ''} />
+              <AvatarImage src={user?.photoURL || ""} />
               <AvatarFallback className="bg-red-50 text-red-600">
                 {user?.displayName?.charAt(0) || <UserIcon />}
               </AvatarFallback>
@@ -53,48 +44,30 @@ export default function MobileAside({ user }: { user: User | null }) {
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex flex-col gap-2 mt-6">
-          <p className="px-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-            Navigation
-          </p>
-          
-          <Button variant="ghost" className="justify-start gap-3 w-full" asChild>
+        <div className="flex flex-col gap-2 p-4">
+          <Button
+            variant="ghost"
+            className="justify-start gap-3 w-full"
+            asChild
+          >
             <Link to="/">
               <History className="h-4 w-4" />
               Feed
             </Link>
           </Button>
 
-          <Button variant="ghost" className="justify-start gap-3 w-full" asChild>
+          <Button
+            variant="ghost"
+            className="justify-start gap-3 w-full"
+            asChild
+          >
             <Link to="/saved-channels">
               <Bookmark className="h-4 w-4" />
               Saved Channels
             </Link>
           </Button>
-
-          <div className="my-4 border-t pt-4">
-            <p className="px-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-              Account
-            </p>
-            <Button variant="ghost" className="justify-start gap-3 w-full" onClick={() => navigate({ to: '/login' })}>
-              <UserIcon className="h-4 w-4" />
-              Profile
-            </Button>
-      
-          </div>
-        </div>
-
-        <div className="absolute bottom-8 left-6 right-6">
-          <Button 
-            variant="destructive" 
-            className="w-full gap-2" 
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </Button>
         </div>
       </SheetContent>
     </Sheet>
-  )
+  );
 }
