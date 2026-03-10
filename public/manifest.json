@@ -4,8 +4,7 @@
   "description": "YouTube Redefined for Education",
   "start_url": "/",
   "scope": "/",
-  "display": "fullscreen",
-  "orientation": "portrait",
+  "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
   "icons": [
