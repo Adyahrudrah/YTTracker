@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { auth, getLatestVideos, getWatchingVideos } from "../services/firebase";
 import { useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { Loader2, Tv, History, Sparkles } from "lucide-react";
+import { Loader2, History, Sparkles } from "lucide-react";
 import VideoCard from "#/components/VideoCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 

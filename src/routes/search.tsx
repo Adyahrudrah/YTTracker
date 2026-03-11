@@ -1,10 +1,11 @@
 // routes/search.tsx
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { fetchChannels } from "../services/youtube";
 import { Loader2, SearchX } from "lucide-react";
 import { ChannelCard } from "#/components/ChannelCard";
 import { areChannelsExist } from "#/services/firebase";
+import { useMemo } from "react";
 
 // Define search params type for type-safety
 type SearchParams = {
@@ -23,17 +24,20 @@ export const Route = createFileRoute("/search")({
 function SearchResults() {
   const { q } = Route.useSearch();
 
-  const { data: channels, isLoading } = useSuspenseQuery({
+  const { data: channels, isLoading } = useQuery({
     queryKey: ["search-channels", q],
     queryFn: () => fetchChannels(q || ""),
     refetchOnWindowFocus: false,
   });
 
-  const channelIds = channels.map((c) => c.id);
+  const channelIds = useMemo(() => {
+    return channels?.map((c) => c.id) || [];
+  }, [channels]);
 
-  const { data: channeInFb } = useSuspenseQuery({
+  const { data: channelIdsInFb } = useQuery({
     queryKey: ["channel-ids", channelIds],
     queryFn: () => areChannelsExist(channelIds),
+    enabled: !!channelIds,
     refetchOnWindowFocus: false,
   });
 
@@ -58,13 +62,14 @@ function SearchResults() {
       <h1 className="text-2xl font-bold mb-6">Channel results for "{q}"</h1>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {channels?.map((channel) => (
-          <ChannelCard
-            key={channel.id}
-            channel={channel}
-            isSaved={channeInFb[channel.id]}
-          />
-        ))}
+        {channelIdsInFb &&
+          channels?.map((channel) => (
+            <ChannelCard
+              key={channel.id}
+              channel={channel}
+              isSaved={channelIdsInFb[channel.id]}
+            />
+          ))}
       </div>
     </div>
   );

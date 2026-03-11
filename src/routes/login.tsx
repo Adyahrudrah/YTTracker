@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { auth, signInWithGoogle } from "../services/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
-import { Youtube, Zap, ShieldCheck, LayoutDashboard } from "lucide-react";
+import { Youtube, Zap, LayoutDashboard } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
   component: LoginComponent,
@@ -44,7 +44,7 @@ function LoginComponent() {
       {/* Hero Section - Hidden on Mobile, Flex on Desktop */}
       <div className="relative hidden lg:flex w-full lg:w-1/2 xl:w-3/5 flex-col justify-center bg-zinc-950 p-16 text-white overflow-hidden">
         {/* Subtle Background Pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-size-[40px_40px] mask-[radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
 
         <div className="relative z-10 max-w-2xl">
           <div className="mb-10 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-1.5 border border-zinc-800">
@@ -106,7 +106,7 @@ function LoginComponent() {
               <h2 className="text-3xl font-extrabold tracking-tight text-zinc-900">
                 TubeFocus
               </h2>
-              <p className="text-zinc-500 text-sm max-w-[250px]">
+              <p className="text-zinc-500 text-sm max-w-62.5">
                 Your distraction-free YouTube workspace
               </p>
             </div>

@@ -133,7 +133,6 @@ export const areChannelsExist = async (
   const userId = auth.currentUser?.uid;
   if (!userId || channelIds.length === 0) return {};
 
-  // Firestore "in" queries are limited to batches of 30
   const limitedIds = channelIds.slice(0, 30);
 
   const colRef = collection(db, `users/${userId}/saved_channels`);
@@ -150,8 +149,6 @@ export const areChannelsExist = async (
   querySnapshot.forEach((doc) => {
     results[doc.id] = true;
   });
-
-  console.log(results);
 
   return results;
 };
