@@ -92,6 +92,9 @@ export const fetchChannelVideos = async (
           isShorts: seconds > 0 && seconds <= 60,
           duration: item.contentDetails.duration,
           viewCount: item.statistics.viewCount,
+          lastPlayed: 0,
+          progressPercent: 0,
+          updatedAt: Date.now(),
         },
       ];
     }),

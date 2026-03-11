@@ -8,6 +8,7 @@ import {
   CheckCircle,
   RotateCcw,
   X,
+  User, // Added for channel icon
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { VideoPlayer } from "./VideoPlayer";
@@ -22,6 +23,7 @@ import { toast } from "sonner";
 import { updateVideoProgress } from "#/services/firebase";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "#/lib/utils";
+import { Link } from "@tanstack/react-router"; // Added for navigation
 
 interface VideoCardProps {
   video: YTVideo;
@@ -51,6 +53,7 @@ function VideoCard({ video }: VideoCardProps) {
       toast.success(message);
       queryClient.invalidateQueries({ queryKey: ["saved-videos"] });
       queryClient.invalidateQueries({ queryKey: ["videos-inprogress"] });
+      queryClient.invalidateQueries({ queryKey: ["latest-videos"] });
     } catch (error) {
       toast.error("Failed to update status");
     }
@@ -80,6 +83,7 @@ function VideoCard({ video }: VideoCardProps) {
       );
       queryClient.invalidateQueries({ queryKey: ["saved-videos"] });
       queryClient.invalidateQueries({ queryKey: ["videos-inprogress"] });
+      queryClient.invalidateQueries({ queryKey: ["latest-videos"] });
     }
   };
 
@@ -90,6 +94,17 @@ function VideoCard({ video }: VideoCardProps) {
           <div className="relative aspect-video overflow-hidden rounded-xl bg-muted">
             {/* Action Buttons Row */}
             <div className="z-20 absolute top-2 right-2 flex gap-1.5">
+              {/* GO TO CHANNEL BUTTON */}
+              <Link
+                to="/channel/$channelId"
+                params={{ channelId: snippet.channelId }}
+                onClick={(e) => e.stopPropagation()}
+                className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white shadow-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all hover:bg-white hover:text-black"
+                title="Go to Channel"
+              >
+                <User className="h-4 w-4" />
+              </Link>
+
               {/* Dismiss/Reset Button (The 'X') */}
               {hasProgress && (
                 <button
@@ -180,7 +195,17 @@ function VideoCard({ video }: VideoCardProps) {
               {snippet.title}
             </h3>
 
-            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted-foreground">
+            {/* CHANNEL NAME LINK */}
+            <Link
+              to="/channel/$channelId"
+              params={{ channelId: snippet.channelId }}
+              className="mt-1 block font-bold text-muted-foreground hover:text-primary transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {snippet.channelTitle}
+            </Link>
+
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Eye className="h-3 w-3" />
                 {formatNumToShort(details.viewCount)}

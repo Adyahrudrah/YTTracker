@@ -156,16 +156,13 @@ export const areChannelsExist = async (
   return results;
 };
 
-export const getLatestVideosFromAllChannels = async (): Promise<YTVideo[]> => {
+export const getLatestVideos = async (): Promise<YTVideo[]> => {
   const userId = auth.currentUser?.uid;
   if (!userId) return [];
-  await getWatchingVideos();
-  // 1. Get all saved channels
   const channelsRef = collection(db, `users/${userId}/saved_channels`);
   const channelsSnap = await getDocs(channelsRef);
 
   const videoPromises = channelsSnap.docs.map(async (channelDoc) => {
-    // 2. For each channel, get the single latest video
     const videosRef = collection(
       db,
       `users/${userId}/saved_channels/${channelDoc.id}/videos`,
@@ -173,6 +170,8 @@ export const getLatestVideosFromAllChannels = async (): Promise<YTVideo[]> => {
     const q = query(
       videosRef,
       orderBy("snippet.publishedAt", "desc"),
+      where("details.progressPercent", "==", 0),
+      where("details.isShorts", "==", false),
       limit(1),
     );
     const videoSnap = await getDocs(q);
@@ -181,7 +180,6 @@ export const getLatestVideosFromAllChannels = async (): Promise<YTVideo[]> => {
   });
 
   const results = await Promise.all(videoPromises);
-  // Filter out any undefined results (channels with no videos saved yet)
   return results
     .filter(Boolean)
     .sort(
@@ -221,7 +219,6 @@ export const getWatchingVideos = async (): Promise<YTVideo[]> => {
   if (!userId) return [];
 
   const videosRef = collectionGroup(db, "videos");
-
   const q = query(
     videosRef,
     where("userId", "==", userId),
@@ -233,3 +230,50 @@ export const getWatchingVideos = async (): Promise<YTVideo[]> => {
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map((doc) => doc.data() as YTVideo);
 };
+
+// export const getFeedVideos = async (): Promise<YTVideo[]> => {
+//   const userId = auth.currentUser?.uid;
+//   if (!userId) return [];
+
+//   const videosRef = collectionGroup(db, "videos");
+
+//   const q = query(
+//     videosRef,
+//     where("userId", "==", userId),
+//     where("details.progressPercent", "==", 0),
+//     orderBy("snippet.publishedAt", "desc"),
+//   );
+
+//   const querySnapshot = await getDocs(q);
+//   const data = querySnapshot.docs.map((doc) => doc.data() as YTVideo);
+//   return data;
+// };
+
+// export const migrateAllVideosProgress = async (newPercent: number = 0) => {
+//   const userId = auth.currentUser?.uid;
+//   if (!userId) throw new Error("User not authenticated");
+
+//   const videosRef = collectionGroup(db, "videos");
+//   const q = query(videosRef, where("userId", "==", userId));
+
+//   const querySnapshot = await getDocs(q);
+//   const docs = querySnapshot.docs;
+
+//   const chunks = [];
+//   for (let i = 0; i < docs.length; i += 500) {
+//     chunks.push(docs.slice(i, i + 500));
+//   }
+
+//   for (const chunk of chunks) {
+//     const batch = writeBatch(db);
+//     chunk.forEach((videoDoc) => {
+//       batch.update(videoDoc.ref, {
+//         "details.progressPercent": newPercent,
+//         "details.updatedAt": Date.now(),
+//       });
+//     });
+//     await batch.commit();
+//   }
+
+//   return docs.length;
+// };
