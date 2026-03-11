@@ -15,6 +15,7 @@ import {
   SortAsc,
 } from "lucide-react";
 import { useMemo, useEffect, useState } from "react";
+import { useInView } from "react-intersection-observer";
 import { toast } from "sonner";
 import VideoCard from "#/components/VideoCard";
 import {
@@ -50,6 +51,12 @@ function ChannelVideosPage() {
 
   const [sortBy, setSortBy] = useState<SortOption>("time");
   const [shouldLoadAll, setShouldLoadAll] = useState(false);
+  const [displayLimit, setDisplayLimit] = useState(24);
+
+  const { ref, inView } = useInView({
+    threshold: 0.1,
+    rootMargin: "400px",
+  });
 
   const { data: isSaved } = useQuery({
     queryKey: ["saved-channel", channelId],
@@ -81,6 +88,12 @@ function ChannelVideosPage() {
       fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage, shouldLoadAll]);
+
+  useEffect(() => {
+    if (inView && !isLoadingSaved) {
+      setDisplayLimit((prev) => prev + 24);
+    }
+  }, [inView, isLoadingSaved]);
 
   const sortVideos = (videos: YTVideo[], criterion: SortOption) => {
     const items = [...videos];
@@ -130,6 +143,7 @@ function ChannelVideosPage() {
     ) {
       saveVideosToChannel(channelId, allVideos);
       toast.success(`Saved ${allVideos.length} videos to database!`);
+      setShouldLoadAll(false);
     }
   }, [
     allVideos,
@@ -140,6 +154,7 @@ function ChannelVideosPage() {
     isLoading,
     userId,
     shouldLoadAll,
+    isSaved,
   ]);
 
   const { mutate: refreshForNew, isPending: isRefreshing } = useMutation({
@@ -158,19 +173,7 @@ function ChannelVideosPage() {
         toast.info("No new videos found.");
         return;
       }
-
-      queryClient.setQueryData(queryKey, (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page: any, i: number) =>
-            i === 0
-              ? { ...page, videos: [...newVideos, ...page.videos] }
-              : page,
-          ),
-        };
-      });
-
+      queryClient.invalidateQueries({ queryKey: ["saved-videos", channelId] });
       toast.success(`Added ${newVideos.length} new videos!`);
     },
   });
@@ -185,7 +188,17 @@ function ChannelVideosPage() {
     [allVideos],
   );
 
-  if (isLoading) {
+  const visibleVideos = useMemo(
+    () => videosOnly.slice(0, displayLimit),
+    [videosOnly, displayLimit],
+  );
+
+  const visibleShorts = useMemo(
+    () => shortsOnly.slice(0, displayLimit),
+    [shortsOnly, displayLimit],
+  );
+
+  if (isLoading || isLoadingSaved) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-7xl">
         <header className="mb-8 border-b pb-6 space-y-4">
@@ -208,8 +221,8 @@ function ChannelVideosPage() {
           <h1 className="text-3xl font-bold tracking-tight">Channel Feed</h1>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">
-              {allVideos.length} total items synced
-              {isFetchingNextPage && " (syncing...)"}
+              {allVideos.length} items available
+              {isFetchingNextPage && " (syncing YouTube...)"}
             </span>
           </div>
         </div>
@@ -232,22 +245,16 @@ function ChannelVideosPage() {
           <TabsList className="grid w-full max-w-100 grid-cols-2">
             <TabsTrigger value="videos" className="flex items-center gap-2">
               <PlayCircle className="h-4 w-4" />
-              Videos
-              <span className="ml-1 text-xs opacity-50">
-                ({videosOnly.length})
-              </span>
+              Videos ({videosOnly.length})
             </TabsTrigger>
             <TabsTrigger value="shorts" className="flex items-center gap-2">
               <Smartphone className="h-4 w-4" />
-              Shorts
-              <span className="ml-1 text-xs opacity-50">
-                ({shortsOnly.length})
-              </span>
+              Shorts ({shortsOnly.length})
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex justify-between w-full items-center gap-2 sm:w-auto">
-            <SortAsc className="h-4 w-4 text-muted-foreground" /> SortBy
+          <div className="flex items-center gap-2">
+            <SortAsc className="h-4 w-4 text-muted-foreground" />
             <Select
               value={sortBy}
               onValueChange={(value) => setSortBy(value as SortOption)}
@@ -264,64 +271,52 @@ function ChannelVideosPage() {
           </div>
         </div>
 
-        <header className="flex flex-col items-center">
-          {hasNextPage && (
-            <div className="w-full max-w-md">
-              {shouldLoadAll ? (
-                <div className="flex flex-col items-center space-y-4">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground italic">
-                    Downloading full channel history...
-                  </p>
-                </div>
-              ) : (
-                <div className="w-full flex justify-center">
-                  <Button
-                    onClick={() => setShouldLoadAll(true)}
-                    className="px-8"
-                  >
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Sync All Videos
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </header>
+        {isFirebaseEmpty && hasNextPage && (
+          <div className="flex flex-col items-center py-10 bg-muted/30 rounded-lg mb-8 border-2 border-dashed">
+            {shouldLoadAll ? (
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm font-medium">
+                  Syncing {allVideos.length} items...
+                </p>
+              </div>
+            ) : (
+              <Button onClick={() => setShouldLoadAll(true)} size="lg">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Sync Full Channel to Database
+              </Button>
+            )}
+          </div>
+        )}
 
-        <TabsContent value="videos" className="border-none p-0 outline-none">
-          {videosOnly.length > 0 ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {videosOnly.map((video) => (
-                <VideoCard
-                  video={video}
-                  key={video.snippet.resourceId.videoId}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="py-20 text-center text-muted-foreground">
-              No long-form videos found.
-            </div>
-          )}
+        <TabsContent
+          value="videos"
+          className="m-0 border-none p-0 outline-none"
+        >
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {visibleVideos.map((video) => (
+              <VideoCard video={video} key={video.snippet.resourceId.videoId} />
+            ))}
+          </div>
         </TabsContent>
 
-        <TabsContent value="shorts" className="border-none p-0 outline-none">
-          {shortsOnly.length > 0 ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {shortsOnly.map((video) => (
-                <VideoCard
-                  video={video}
-                  key={video.snippet.resourceId.videoId}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="py-20 text-center text-muted-foreground">
-              No Shorts found.
-            </div>
-          )}
+        <TabsContent
+          value="shorts"
+          className="m-0 border-none p-0 outline-none"
+        >
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {visibleShorts.map((video) => (
+              <VideoCard video={video} key={video.snippet.resourceId.videoId} />
+            ))}
+          </div>
         </TabsContent>
+
+        <div ref={ref} className="h-20 flex items-center justify-center mt-8">
+          {(videosOnly.length > displayLimit ||
+            shortsOnly.length > displayLimit) && (
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          )}
+        </div>
       </Tabs>
     </div>
   );
