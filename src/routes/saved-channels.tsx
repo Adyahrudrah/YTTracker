@@ -58,7 +58,7 @@ function SavedChannelsPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {saved?.map((channel) => (
-            <ChannelCard key={channel.id} channel={channel} />
+            <ChannelCard key={channel.id} channel={channel} isSaved={true} />
           ))}
         </div>
       )}

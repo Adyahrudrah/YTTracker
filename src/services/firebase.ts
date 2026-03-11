@@ -15,6 +15,7 @@ import {
   updateDoc,
   collectionGroup,
   where,
+  documentId,
 } from "firebase/firestore";
 import {
   getAuth,
@@ -124,6 +125,35 @@ export const isChannelExist = async (channelId: string): Promise<boolean> => {
   const docSnap = await getDoc(docRef);
 
   return docSnap.exists();
+};
+
+export const areChannelsExist = async (
+  channelIds: string[],
+): Promise<Record<string, boolean>> => {
+  const userId = auth.currentUser?.uid;
+  if (!userId || channelIds.length === 0) return {};
+
+  // Firestore "in" queries are limited to batches of 30
+  const limitedIds = channelIds.slice(0, 30);
+
+  const colRef = collection(db, `users/${userId}/saved_channels`);
+  const q = query(colRef, where(documentId(), "in", limitedIds));
+
+  const querySnapshot = await getDocs(q);
+
+  const results: Record<string, boolean> = {};
+
+  channelIds.forEach((id) => {
+    results[id] = false;
+  });
+
+  querySnapshot.forEach((doc) => {
+    results[doc.id] = true;
+  });
+
+  console.log(results);
+
+  return results;
 };
 
 export const getLatestVideosFromAllChannels = async (): Promise<YTVideo[]> => {

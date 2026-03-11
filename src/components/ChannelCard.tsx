@@ -5,12 +5,8 @@ import {
   BookmarkCheck,
   Loader2,
 } from "lucide-react";
-import {
-  saveChannel,
-  removeChannel,
-  isChannelExist,
-} from "../services/firebase";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { saveChannel, removeChannel } from "../services/firebase";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
@@ -21,23 +17,19 @@ import { toast } from "sonner";
 
 interface ChannelCardProps {
   channel: YTChannel;
-  isSaved?: boolean;
+  isSaved: boolean;
 }
 
-export function ChannelCard({ channel }: ChannelCardProps) {
+export function ChannelCard({ channel, isSaved }: ChannelCardProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-
-  const { data: isSaved } = useQuery({
-    queryKey: ["channel", channel],
-    queryFn: () => isChannelExist(channel.id),
-  });
 
   const { mutate: toggleSave, isPending } = useMutation({
     mutationFn: () =>
       isSaved ? removeChannel(channel.id) : saveChannel(channel),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["saved-channels"] });
+      queryClient.invalidateQueries({ queryKey: ["channel-ids"] });
 
       toast.success(
         channel.snippet.title + `${isSaved ? " Removed" : " Saved"}`,

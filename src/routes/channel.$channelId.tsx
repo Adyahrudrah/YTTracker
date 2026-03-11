@@ -264,6 +264,31 @@ function ChannelVideosPage() {
           </div>
         </div>
 
+        <header className="flex flex-col items-center">
+          {hasNextPage && (
+            <div className="w-full max-w-md">
+              {shouldLoadAll ? (
+                <div className="flex flex-col items-center space-y-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground italic">
+                    Downloading full channel history...
+                  </p>
+                </div>
+              ) : (
+                <div className="w-full flex justify-center">
+                  <Button
+                    onClick={() => setShouldLoadAll(true)}
+                    className="px-8"
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Sync All Videos
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </header>
+
         <TabsContent value="videos" className="border-none p-0 outline-none">
           {videosOnly.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -298,28 +323,6 @@ function ChannelVideosPage() {
           )}
         </TabsContent>
       </Tabs>
-
-      <footer className="flex flex-col items-center mt-12">
-        {hasNextPage && (
-          <div className="w-full max-w-md">
-            {shouldLoadAll ? (
-              <div className="flex flex-col items-center space-y-4">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground italic">
-                  Downloading full channel history...
-                </p>
-              </div>
-            ) : (
-              <div className="w-full flex justify-center">
-                <Button onClick={() => setShouldLoadAll(true)} className="px-8">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Sync All Videos
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-      </footer>
     </div>
   );
 }

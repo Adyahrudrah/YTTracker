@@ -29,7 +29,7 @@ export const yt = {
     yt_api("/search", {
       part: "snippet",
       type: "channel",
-      maxResults: "50",
+      maxResults: "30",
       q,
     }),
 
@@ -102,8 +102,6 @@ export const fetchChannelVideos = async (
     snippet: item.snippet,
     details: detailsMap.get(item.snippet.resourceId.videoId),
   }));
-
-  console.log(videos);
 
   let reachedKnownVideo = false;
 
