@@ -77,8 +77,7 @@ function ChannelVideosPage() {
     initialPageParam: undefined as any,
     getNextPageParam: (lastPage) => lastPage.lastDoc,
     enabled: !!userId,
-    staleTime: 1000 * 60 * 60 * 24,
-    gcTime: 1000 * 60 * 60 * 24,
+    staleTime: 1000 * 60 * 10, // Save reads: 10 min cache
   });
 
   const savedVideos = useMemo(
