@@ -24,7 +24,6 @@ import {
   isChannelExist,
   saveVideosToChannel,
 } from "#/services/firebase";
-import type { YTVideo } from "#/types/yt";
 import { VideoCardSkeleton } from "#/components/ui/skeletons.tsx/dd";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "#/components/ui/tabs";
 import {
@@ -47,57 +46,97 @@ function ChannelVideosPage() {
   const { channelId } = Route.useParams();
   const userId = auth.currentUser?.uid;
   const queryClient = useQueryClient();
-  const queryKey = ["channel-videos", channelId, userId];
 
   const [sortBy, setSortBy] = useState<SortOption>("time");
   const [shouldLoadAll, setShouldLoadAll] = useState(false);
-  const [displayLimit, setDisplayLimit] = useState(24);
+  const [isSaving, setIsSaving] = useState(false);
 
   const { ref, inView } = useInView({
     threshold: 0.1,
     rootMargin: "400px",
   });
 
+  // 1. Check if channel is saved in DB
   const { data: isSaved } = useQuery({
     queryKey: ["saved-channel", channelId],
     queryFn: () => isChannelExist(channelId),
     enabled: !!userId,
   });
 
-  const { data: savedVideos, isLoading: isLoadingSaved } = useQuery({
-    queryKey: ["saved-videos", channelId],
-    queryFn: () => getSavedVideosForChannel(channelId),
+  // 2. Fetch saved videos using Infinite Scroll (Cursor Pagination)
+  const {
+    data: savedData,
+    fetchNextPage: fetchNextSavedPage,
+    hasNextPage: hasNextSavedPage,
+    isLoading: isLoadingSaved,
+    isFetchingNextPage: isFetchingSavedNext,
+  } = useInfiniteQuery({
+    queryKey: ["saved-videos-infinite", channelId],
+    queryFn: ({ pageParam }) =>
+      getSavedVideosForChannel(channelId, 24, pageParam),
+    initialPageParam: undefined as any,
+    getNextPageParam: (lastPage) => lastPage.lastDoc,
     enabled: !!userId,
+    staleTime: 1000 * 60 * 10, // Save reads: 10 min cache
   });
 
-  const isFirebaseEmpty =
-    !isLoadingSaved && (!savedVideos || savedVideos.length === 0);
+  const savedVideos = useMemo(
+    () => savedData?.pages.flatMap((page) => page.videos) || [],
+    [savedData],
+  );
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery({
-      queryKey,
-      queryFn: ({ pageParam }) => fetchChannelVideos(channelId, pageParam),
-      initialPageParam: undefined as string | undefined,
-      getNextPageParam: (lastPage) => lastPage.nextPageToken,
-      refetchOnWindowFocus: false,
-      enabled: !!userId && isFirebaseEmpty,
-    });
+  const isFirebaseEmpty = !isLoadingSaved && savedVideos.length === 0;
 
+  // 3. YouTube API Query (Only if Firebase is empty)
+  const {
+    data: ytData,
+    fetchNextPage: fetchNextYtPage,
+    hasNextPage: hasNextYtPage,
+    isFetchingNextPage: isFetchingYtNext,
+    isLoading: isLoadingYt,
+  } = useInfiniteQuery({
+    queryKey: ["channel-videos-yt", channelId],
+    queryFn: ({ pageParam }) => fetchChannelVideos(channelId, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextPageToken,
+    enabled: !!userId && isFirebaseEmpty,
+    refetchOnWindowFocus: false,
+  });
+
+  // Sync Logic for "Sync All" button
   useEffect(() => {
-    if (hasNextPage && !isFetchingNextPage && shouldLoadAll) {
-      fetchNextPage();
+    if (hasNextYtPage && !isFetchingYtNext && shouldLoadAll) {
+      fetchNextYtPage();
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, shouldLoadAll]);
+  }, [hasNextYtPage, isFetchingYtNext, fetchNextYtPage, shouldLoadAll]);
 
+  // Observer Logic: Trigger next page (Saved or YT)
   useEffect(() => {
-    if (inView && !isLoadingSaved) {
-      setDisplayLimit((prev) => prev + 24);
+    if (inView) {
+      if (isFirebaseEmpty && hasNextYtPage && !isFetchingYtNext) {
+        fetchNextYtPage();
+      } else if (!isFirebaseEmpty && hasNextSavedPage && !isFetchingSavedNext) {
+        fetchNextSavedPage();
+      }
     }
-  }, [inView, isLoadingSaved]);
+  }, [
+    inView,
+    isFirebaseEmpty,
+    hasNextYtPage,
+    isFetchingYtNext,
+    hasNextSavedPage,
+    isFetchingSavedNext,
+    fetchNextYtPage,
+    fetchNextSavedPage,
+  ]);
 
-  const sortVideos = (videos: YTVideo[], criterion: SortOption) => {
-    const items = [...videos];
-    switch (criterion) {
+  const allVideos = useMemo(() => {
+    const baseVideos = isFirebaseEmpty
+      ? ytData?.pages.flatMap((p) => p.videos) || []
+      : savedVideos;
+
+    const items = [...baseVideos];
+    switch (sortBy) {
       case "views":
         return items.sort(
           (a, b) =>
@@ -118,62 +157,77 @@ function ChannelVideosPage() {
             new Date(a.snippet.publishedAt).getTime(),
         );
     }
-  };
+  }, [ytData, savedVideos, sortBy, isFirebaseEmpty]);
 
-  const allVideos = useMemo(() => {
-    let baseVideos: YTVideo[] = [];
-    if (savedVideos && savedVideos.length > 0) {
-      baseVideos = savedVideos;
-    } else {
-      baseVideos = data?.pages.flatMap((page) => page.videos) || [];
-    }
-    return sortVideos(baseVideos, sortBy);
-  }, [data, savedVideos, sortBy]);
+  // Write Logic (Saving new videos to Firebase)
+  const existingIds = useMemo(
+    () => new Set(savedVideos.map((v) => v.snippet.resourceId.videoId)),
+    [savedVideos],
+  );
 
   useEffect(() => {
-    if (
-      allVideos.length > 0 &&
-      !hasNextPage &&
-      !isFetchingNextPage &&
-      isFirebaseEmpty &&
-      !isLoading &&
-      userId &&
-      shouldLoadAll &&
-      isSaved
-    ) {
-      saveVideosToChannel(channelId, allVideos);
-      toast.success(`Saved ${allVideos.length} videos to database!`);
-      setShouldLoadAll(false);
-    }
+    const syncToFirebase = async () => {
+      if (
+        allVideos.length > 0 &&
+        !hasNextYtPage &&
+        !isFetchingYtNext &&
+        isFirebaseEmpty &&
+        !isLoadingYt &&
+        userId &&
+        shouldLoadAll &&
+        isSaved &&
+        !isSaving
+      ) {
+        setIsSaving(true);
+        const loadingToast = toast.loading("Saving to database...");
+        try {
+          const savedCount = await saveVideosToChannel(
+            channelId,
+            allVideos,
+            existingIds,
+          );
+          toast.success(`Saved ${savedCount} new videos!`, {
+            id: loadingToast,
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["saved-videos-infinite", channelId],
+          });
+          setShouldLoadAll(false);
+        } catch (error) {
+          toast.error("Failed to save.", { id: loadingToast });
+        } finally {
+          setIsSaving(false);
+        }
+      }
+    };
+    syncToFirebase();
   }, [
     allVideos,
-    hasNextPage,
-    isFetchingNextPage,
-    channelId,
+    hasNextYtPage,
+    isFetchingYtNext,
     isFirebaseEmpty,
-    isLoading,
+    isLoadingYt,
     userId,
     shouldLoadAll,
     isSaved,
+    isSaving,
+    queryClient,
+    existingIds,
+    channelId,
   ]);
 
   const { mutate: refreshForNew, isPending: isRefreshing } = useMutation({
     mutationFn: async () => {
       const latestVideoDate =
         allVideos.length > 0 ? allVideos[0].snippet.publishedAt : undefined;
-      const response = await fetchChannelVideos(
-        channelId,
-        undefined,
-        latestVideoDate,
-      );
-      return response.videos;
+      return (await fetchChannelVideos(channelId, undefined, latestVideoDate))
+        .videos;
     },
     onSuccess: (newVideos) => {
-      if (newVideos.length === 0) {
-        toast.info("No new videos found.");
-        return;
-      }
-      queryClient.invalidateQueries({ queryKey: ["saved-videos", channelId] });
+      if (newVideos.length === 0) return toast.info("No new videos found.");
+      queryClient.invalidateQueries({
+        queryKey: ["saved-videos-infinite", channelId],
+      });
       toast.success(`Added ${newVideos.length} new videos!`);
     },
   });
@@ -182,31 +236,16 @@ function ChannelVideosPage() {
     () => allVideos.filter((v) => !v.details.isShorts),
     [allVideos],
   );
-
   const shortsOnly = useMemo(
     () => allVideos.filter((v) => v.details.isShorts),
     [allVideos],
   );
 
-  const visibleVideos = useMemo(
-    () => videosOnly.slice(0, displayLimit),
-    [videosOnly, displayLimit],
-  );
-
-  const visibleShorts = useMemo(
-    () => shortsOnly.slice(0, displayLimit),
-    [shortsOnly, displayLimit],
-  );
-
-  if (isLoading || isLoadingSaved) {
+  if (isLoadingYt || isLoadingSaved) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-7xl">
-        <header className="mb-8 border-b pb-6 space-y-4">
-          <div className="h-10 w-48 rounded bg-muted animate-pulse" />
-          <div className="h-5 w-32 rounded bg-muted animate-pulse" />
-        </header>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 12 }).map((_, i) => (
+          {Array.from({ length: 8 }).map((_, i) => (
             <VideoCardSkeleton key={i} />
           ))}
         </div>
@@ -219,14 +258,10 @@ function ChannelVideosPage() {
       <header className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 border-b pb-8">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight">Channel Feed</h1>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">
-              {allVideos.length} items available
-              {isFetchingNextPage && " (syncing YouTube...)"}
-            </span>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            {allVideos.length} items loaded
+          </p>
         </div>
-
         <Button
           variant="outline"
           size="sm"
@@ -241,23 +276,20 @@ function ChannelVideosPage() {
       </header>
 
       <Tabs defaultValue="videos" className="w-full">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
           <TabsList className="grid w-full max-w-100 grid-cols-2">
             <TabsTrigger value="videos" className="flex items-center gap-2">
-              <PlayCircle className="h-4 w-4" />
-              Videos ({videosOnly.length})
+              <PlayCircle className="h-4 w-4" /> Videos ({videosOnly.length})
             </TabsTrigger>
             <TabsTrigger value="shorts" className="flex items-center gap-2">
-              <Smartphone className="h-4 w-4" />
-              Shorts ({shortsOnly.length})
+              <Smartphone className="h-4 w-4" /> Shorts ({shortsOnly.length})
             </TabsTrigger>
           </TabsList>
-
           <div className="flex items-center gap-2">
             <SortAsc className="h-4 w-4 text-muted-foreground" />
             <Select
               value={sortBy}
-              onValueChange={(value) => setSortBy(value as SortOption)}
+              onValueChange={(v) => setSortBy(v as SortOption)}
             >
               <SelectTrigger className="w-45">
                 <SelectValue placeholder="Sort by" />
@@ -271,19 +303,16 @@ function ChannelVideosPage() {
           </div>
         </div>
 
-        {isFirebaseEmpty && hasNextPage && (
+        {isFirebaseEmpty && hasNextYtPage && (
           <div className="flex flex-col items-center py-10 bg-muted/30 rounded-lg mb-8 border-2 border-dashed">
             {shouldLoadAll ? (
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm font-medium">
-                  Syncing {allVideos.length} items...
-                </p>
+                <p className="text-sm font-medium">Syncing items...</p>
               </div>
             ) : (
               <Button onClick={() => setShouldLoadAll(true)} size="lg">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Sync Full Channel to Database
+                <RefreshCw className="mr-2 h-4 w-4" /> Sync Full Channel
               </Button>
             )}
           </div>
@@ -291,29 +320,28 @@ function ChannelVideosPage() {
 
         <TabsContent
           value="videos"
-          className="m-0 border-none p-0 outline-none"
+          className="m-0 p-0 border-none outline-none"
         >
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {visibleVideos.map((video) => (
-              <VideoCard video={video} key={video.snippet.resourceId.videoId} />
+            {videosOnly.map((v) => (
+              <VideoCard video={v} key={v.snippet.resourceId.videoId} />
             ))}
           </div>
         </TabsContent>
 
         <TabsContent
           value="shorts"
-          className="m-0 border-none p-0 outline-none"
+          className="m-0 p-0 border-none outline-none"
         >
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {visibleShorts.map((video) => (
-              <VideoCard video={video} key={video.snippet.resourceId.videoId} />
+            {shortsOnly.map((v) => (
+              <VideoCard video={v} key={v.snippet.resourceId.videoId} />
             ))}
           </div>
         </TabsContent>
 
         <div ref={ref} className="h-20 flex items-center justify-center mt-8">
-          {(videosOnly.length > displayLimit ||
-            shortsOnly.length > displayLimit) && (
+          {(hasNextSavedPage || (isFirebaseEmpty && hasNextYtPage)) && (
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           )}
         </div>

@@ -16,6 +16,9 @@ import {
   collectionGroup,
   where,
   documentId,
+  QueryDocumentSnapshot,
+  type DocumentData,
+  startAfter,
 } from "firebase/firestore";
 import {
   getAuth,
@@ -76,45 +79,80 @@ export const getSavedChannels = async (): Promise<YTChannel[]> => {
   return querySnapshot.docs.map((doc) => doc.data() as YTChannel);
 };
 
+// services/firebase.ts
+
 export const saveVideosToChannel = async (
   channelId: string,
   videos: YTVideo[],
+  existingVideoIds: Set<string> = new Set(), // Add this parameter
 ) => {
   const userId = auth.currentUser?.uid;
   if (!userId) return;
 
-  const batch = writeBatch(db);
+  const newVideos = videos.filter(
+    (v) => !existingVideoIds.has(v.snippet.resourceId.videoId),
+  );
 
-  videos.forEach((video) => {
-    const docRef = doc(
-      db,
-      `users/${userId}/saved_channels/${channelId}/videos`,
-      video.snippet.resourceId.videoId,
-    );
-    batch.set(docRef, {
-      ...video,
-      userId,
-      savedAt: Date.now(),
+  if (newVideos.length === 0) return 0;
+
+  const BATCH_LIMIT = 500;
+  const chunks = [];
+
+  for (let i = 0; i < newVideos.length; i += BATCH_LIMIT) {
+    chunks.push(newVideos.slice(i, i + BATCH_LIMIT));
+  }
+
+  for (const chunk of chunks) {
+    const batch = writeBatch(db);
+    chunk.forEach((video) => {
+      const docRef = doc(
+        db,
+        `users/${userId}/saved_channels/${channelId}/videos`,
+        video.snippet.resourceId.videoId,
+      );
+      batch.set(docRef, {
+        ...video,
+        userId,
+        savedAt: Date.now(),
+      });
     });
-  });
-  await batch.commit();
+    await batch.commit();
+  }
+  return newVideos.length;
 };
+
+// services/firebase.ts
 
 export const getSavedVideosForChannel = async (
   channelId: string,
-): Promise<YTVideo[]> => {
+  limitCount: number,
+  lastVisibleDoc?: QueryDocumentSnapshot<DocumentData>, // Cursor for pagination
+): Promise<{
+  videos: YTVideo[];
+  lastDoc: QueryDocumentSnapshot<DocumentData> | null;
+}> => {
   const userId = auth.currentUser?.uid;
-  if (!userId) return [];
+  if (!userId) return { videos: [], lastDoc: null };
 
   const vidsRef = collection(
     db,
     `users/${userId}/saved_channels/${channelId}/videos`,
   );
-  // Sort by savedAt or publishedAt so they appear in order
-  const q = query(vidsRef);
-  const snapshot = await getDocs(q);
 
-  return snapshot.docs.map((doc) => doc.data() as YTVideo);
+  let q = query(
+    vidsRef,
+    orderBy("snippet.publishedAt", "desc"),
+    limit(limitCount),
+  );
+
+  if (lastVisibleDoc) {
+    q = query(q, startAfter(lastVisibleDoc));
+  }
+
+  const snapshot = await getDocs(q);
+  const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+  const videos = snapshot.docs.map((doc) => doc.data() as YTVideo);
+  return { videos, lastDoc };
 };
 
 export const isChannelExist = async (channelId: string): Promise<boolean> => {
@@ -222,6 +260,7 @@ export const getWatchingVideos = async (): Promise<YTVideo[]> => {
     where("details.progressPercent", ">", 0),
     where("details.progressPercent", "<", 100),
     orderBy("details.updatedAt", "desc"),
+    limit(100),
   );
 
   const querySnapshot = await getDocs(q);

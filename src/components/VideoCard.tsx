@@ -51,7 +51,7 @@ function VideoCard({ video }: VideoCardProps) {
       );
 
       toast.success(message);
-      queryClient.invalidateQueries({ queryKey: ["saved-videos"] });
+      queryClient.invalidateQueries({ queryKey: ["saved-videos-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["videos-inprogress"] });
       queryClient.invalidateQueries({ queryKey: ["latest-videos"] });
     } catch (error) {
@@ -81,7 +81,7 @@ function VideoCard({ video }: VideoCardProps) {
         video.snippet.resourceId.videoId,
         currentProgress,
       );
-      queryClient.invalidateQueries({ queryKey: ["saved-videos"] });
+      queryClient.invalidateQueries({ queryKey: ["saved-videos-infinite"] });
       queryClient.invalidateQueries({ queryKey: ["videos-inprogress"] });
       queryClient.invalidateQueries({ queryKey: ["latest-videos"] });
     }
