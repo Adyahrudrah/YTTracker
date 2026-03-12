@@ -7,6 +7,8 @@ export interface YTPlayListResponse {
   pageInfo: PageInfo;
 }
 
+export type ytVideoStatus = "queued" | "watching" | "next" | "finished";
+
 export interface YTVideo {
   kind: string;
   id: string;
@@ -15,8 +17,11 @@ export interface YTVideo {
     isShorts: boolean;
     duration: string;
     viewCount: string;
+    status: ytVideoStatus;
     lastPlayed?: number;
     progressPercent?: number;
+    nextId: string | null;
+    prevId: string | null;
   };
 }
 

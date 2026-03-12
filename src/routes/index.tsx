@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { auth, getLatestVideos, getWatchingVideos } from "../services/firebase";
+import { auth, getFeedVideos } from "../services/firebase";
 import { useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { Loader2, History, Sparkles } from "lucide-react";
 import VideoCard from "#/components/VideoCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { YTVideo } from "#/types/yt";
 
 export const Route = createFileRoute("/")({ component: App });
 
@@ -28,21 +29,15 @@ function App() {
     return () => unsubscribe();
   }, [navigate]);
 
-  const { data: videosInProgress, isLoading: isQueryLoading } = useQuery({
-    queryKey: ["videos-inprogress", userId],
-    queryFn: getWatchingVideos,
+  const { data: feedVideos, isLoading: isQueryLoading } = useQuery({
+    queryKey: ["feed-videos", userId],
+    queryFn: getFeedVideos,
     enabled: !!userId,
     refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 60 * 24,
   });
 
-  const { data: latestVideos, isLoading: isVLLoading } = useQuery({
-    queryKey: ["latest-videos", userId],
-    queryFn: getLatestVideos,
-    enabled: !!userId,
-    refetchOnWindowFocus: false,
-  });
-
-  const isLoading = authLoading || isQueryLoading || isVLLoading;
+  const isLoading = authLoading || isQueryLoading;
 
   if (isLoading) {
     return (
@@ -52,8 +47,13 @@ function App() {
     );
   }
 
-  const hasContent =
-    (videosInProgress?.length || 0) > 0 || (latestVideos?.length || 0) > 0;
+  // Filter videos by status
+  const latestVideos =
+    feedVideos?.filter((v) => v.details.status === "next") || [];
+  const watchingVideos =
+    feedVideos?.filter((v) => v.details.status === "watching") || [];
+
+  const hasContent = (feedVideos?.length || 0) > 0;
 
   return (
     <main className="page-wrap px-4 py-8 max-w-7xl mx-auto">
@@ -69,7 +69,7 @@ function App() {
       ) : (
         <Tabs defaultValue="latest" className="w-full">
           <div className="flex justify-start mb-8">
-            <TabsList className="grid w-full max-w-100 grid-cols-2">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="latest" className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4" /> Latest
               </TabsTrigger>
@@ -80,33 +80,48 @@ function App() {
           </div>
 
           <TabsContent value="latest" className="mt-0 outline-none">
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {latestVideos?.map((video) => (
-                <VideoCard
-                  video={video}
-                  key={video.snippet.resourceId.videoId}
-                />
-              ))}
-            </div>
+            <VideoGrid
+              videos={latestVideos}
+              emptyMessage="No new videos in your feed."
+            />
           </TabsContent>
 
           <TabsContent value="watching" className="mt-0 outline-none">
-            {videosInProgress && videosInProgress.length > 0 ? (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {videosInProgress.map((video) => (
-                  <VideoCard video={video} key={video.id} />
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 border rounded-xl ">
-                <p className="text-muted-foreground">
-                  You haven't started watching any videos yet.
-                </p>
-              </div>
-            )}
+            <VideoGrid
+              videos={watchingVideos}
+              emptyMessage="You haven't started watching any videos yet."
+            />
           </TabsContent>
         </Tabs>
       )}
     </main>
+  );
+}
+
+// Sub-component to keep the code clean
+function VideoGrid({
+  videos,
+  emptyMessage,
+}: {
+  videos: YTVideo[];
+  emptyMessage: string;
+}) {
+  if (videos.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 border rounded-xl bg-muted/10">
+        <p className="text-muted-foreground">{emptyMessage}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {videos.map((video) => (
+        <VideoCard
+          video={video}
+          key={video.snippet?.resourceId?.videoId || video.id}
+        />
+      ))}
+    </div>
   );
 }

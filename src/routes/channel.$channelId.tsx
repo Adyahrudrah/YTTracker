@@ -21,7 +21,6 @@ import VideoCard from "#/components/VideoCard";
 import {
   auth,
   getSavedVideosForChannel,
-  isChannelExist,
   saveVideosToChannel,
 } from "#/services/firebase";
 import { VideoCardSkeleton } from "#/components/ui/skeletons.tsx/dd";
@@ -34,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { parseISO8601ToSeconds } from "#/utils/base";
+import { fbQueries } from "#/services/query-factory";
 
 export const Route = createFileRoute("/channel/$channelId")({
   validateSearch: (search) => search,
@@ -57,11 +57,9 @@ function ChannelVideosPage() {
   });
 
   // 1. Check if channel is saved in DB
-  const { data: isSaved } = useQuery({
-    queryKey: ["saved-channel", channelId],
-    queryFn: () => isChannelExist(channelId),
-    enabled: !!userId,
-  });
+  const { data: isSaved } = useQuery(
+    fbQueries.isChannelExist(channelId, userId),
+  );
 
   // 2. Fetch saved videos using Infinite Scroll (Cursor Pagination)
   const {
@@ -77,7 +75,6 @@ function ChannelVideosPage() {
     initialPageParam: undefined as any,
     getNextPageParam: (lastPage) => lastPage.lastDoc,
     enabled: !!userId,
-    staleTime: 1000 * 60 * 10, // Save reads: 10 min cache
   });
 
   const savedVideos = useMemo(
@@ -174,13 +171,13 @@ function ChannelVideosPage() {
         isFirebaseEmpty &&
         !isLoadingYt &&
         userId &&
-        shouldLoadAll &&
         isSaved &&
         !isSaving
       ) {
         setIsSaving(true);
         const loadingToast = toast.loading("Saving to database...");
         try {
+          allVideos[0].details.status = "next";
           const savedCount = await saveVideosToChannel(
             channelId,
             allVideos,
@@ -191,6 +188,10 @@ function ChannelVideosPage() {
           });
           queryClient.invalidateQueries({
             queryKey: ["saved-videos-infinite", channelId],
+          });
+
+          queryClient.invalidateQueries({
+            queryKey: ["feed-videos", channelId],
           });
           setShouldLoadAll(false);
         } catch (error) {

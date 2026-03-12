@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { VideoPlayer } from "./VideoPlayer";
-import type { YTVideo } from "#/types/yt";
+import type { YTVideo, ytVideoStatus } from "#/types/yt";
 import {
   formatNumToShort,
   formatYouTubeDuration,
@@ -42,18 +42,33 @@ function VideoCard({ video }: VideoCardProps) {
   const hasProgress =
     details?.progressPercent !== undefined && details.progressPercent > 0;
 
-  const handleUpdateProgress = async (percent: number, message: string) => {
+  const handleUpdateProgress = async (
+    percent: number,
+    message: string,
+    status: ytVideoStatus,
+    nextId: string | null,
+  ) => {
     try {
       await updateVideoProgress(
         snippet.channelId,
         video.snippet.resourceId.videoId,
         { currentTime: 0, percent },
+        status,
       );
+      if (nextId) {
+        await updateVideoProgress(
+          snippet.channelId,
+          nextId,
+          { currentTime: 0, percent: 0 },
+          "next",
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ["feed-videos"] });
+      queryClient.invalidateQueries({
+        queryKey: ["saved-videos-infinite", snippet.channelId],
+      });
 
       toast.success(message);
-      queryClient.invalidateQueries({ queryKey: ["saved-videos-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["videos-inprogress"] });
-      queryClient.invalidateQueries({ queryKey: ["latest-videos"] });
     } catch (error) {
       toast.error("Failed to update status");
     }
@@ -65,25 +80,50 @@ function VideoCard({ video }: VideoCardProps) {
     handleUpdateProgress(
       newPercent,
       newPercent === 100 ? "Marked as watched" : "Progress cleared",
+      newPercent === 100 ? "finished" : "queued",
+      video.details.nextId,
     );
   };
 
   const handleDismissProgress = (e: React.MouseEvent) => {
     e.stopPropagation();
-    handleUpdateProgress(0, "Removed from continue watching");
+    handleUpdateProgress(0, "Removed from continue watching", "queued", null);
   };
 
-  const handleDialogChange = (open: boolean) => {
+  const handleDialogChange = async (open: boolean) => {
     setIsOpen(open);
+
+    // Only sync to DB when closing the player
     if (!open && currentProgress.currentTime > 0) {
-      updateVideoProgress(
-        snippet.channelId,
-        video.snippet.resourceId.videoId,
-        currentProgress,
-      );
-      queryClient.invalidateQueries({ queryKey: ["saved-videos-infinite"] });
-      queryClient.invalidateQueries({ queryKey: ["videos-inprogress"] });
-      queryClient.invalidateQueries({ queryKey: ["latest-videos"] });
+      const isFinished = currentProgress.percent >= 98;
+      const videoId = video.snippet.resourceId.videoId;
+
+      try {
+        // Update Current
+        await updateVideoProgress(
+          snippet.channelId,
+          videoId,
+          currentProgress,
+          isFinished ? "finished" : "watching",
+        );
+
+        if (isFinished && video.details.nextId) {
+          await updateVideoProgress(
+            snippet.channelId,
+            video.details.nextId,
+            { currentTime: 0, percent: 0 },
+            "next",
+          );
+        }
+
+        // Single point of invalidation
+        queryClient.invalidateQueries({ queryKey: ["feed-videos"] });
+        queryClient.invalidateQueries({
+          queryKey: ["saved-videos-infinite", snippet.channelId],
+        });
+      } catch (error) {
+        console.error("Failed to sync closing progress", error);
+      }
     }
   };
 

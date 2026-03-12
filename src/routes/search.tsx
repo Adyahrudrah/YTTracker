@@ -1,11 +1,10 @@
 // routes/search.tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { fetchChannels } from "../services/youtube";
 import { Loader2, SearchX } from "lucide-react";
 import { ChannelCard } from "#/components/ChannelCard";
-import { areChannelsExist } from "#/services/firebase";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { fbQueries, ytQueries } from "#/services/query-factory";
 
 // Define search params type for type-safety
 type SearchParams = {
@@ -24,22 +23,21 @@ export const Route = createFileRoute("/search")({
 function SearchResults() {
   const { q } = Route.useSearch();
 
-  const { data: channels, isLoading } = useQuery({
-    queryKey: ["search-channels", q],
-    queryFn: () => fetchChannels(q || ""),
-    refetchOnWindowFocus: false,
-  });
+  const { data: ytChannels, isLoading } = useQuery(
+    ytQueries.searchYtChannels(q),
+  );
 
   const channelIds = useMemo(() => {
-    return channels?.map((c) => c.id) || [];
-  }, [channels]);
+    return ytChannels?.map((c) => c.id) || [];
+  }, [ytChannels]);
 
-  const { data: channelIdsInFb } = useQuery({
-    queryKey: ["channel-ids", channelIds],
-    queryFn: () => areChannelsExist(channelIds),
-    enabled: !!channelIds,
-    refetchOnWindowFocus: false,
-  });
+  const { data: channelIdsInFb } = useQuery(
+    fbQueries.savedYTChannelIds(channelIds),
+  );
+
+  useEffect(() => {
+    console.log(channelIds, channelIdsInFb);
+  }, []);
 
   if (isLoading) {
     return (
@@ -63,11 +61,11 @@ function SearchResults() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {channelIdsInFb &&
-          channels?.map((channel) => (
+          ytChannels?.map((channel) => (
             <ChannelCard
               key={channel.id}
               channel={channel}
-              isSaved={channelIdsInFb[channel.id]}
+              isSaved={channelIdsInFb.has(channel.id) ?? false}
             />
           ))}
       </div>

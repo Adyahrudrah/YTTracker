@@ -29,7 +29,7 @@ export function ChannelCard({ channel, isSaved }: ChannelCardProps) {
       isSaved ? removeChannel(channel.id) : saveChannel(channel),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["saved-channels"] });
-      queryClient.invalidateQueries({ queryKey: ["channel-ids"] });
+      queryClient.invalidateQueries({ queryKey: ["saved-channel-ids"] });
 
       toast.success(
         channel.snippet.title + `${isSaved ? " Removed" : " Saved"}`,

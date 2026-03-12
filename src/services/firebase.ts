@@ -15,7 +15,6 @@ import {
   updateDoc,
   collectionGroup,
   where,
-  documentId,
   QueryDocumentSnapshot,
   type DocumentData,
   startAfter,
@@ -26,7 +25,7 @@ import {
   signInWithPopup,
   signOut,
 } from "firebase/auth";
-import type { YTChannel, YTVideo } from "#/types/yt";
+import type { YTChannel, YTVideo, ytVideoStatus } from "#/types/yt";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -79,7 +78,13 @@ export const getSavedChannels = async (): Promise<YTChannel[]> => {
   return querySnapshot.docs.map((doc) => doc.data() as YTChannel);
 };
 
-// services/firebase.ts
+export const getSavedChannelIds = async (): Promise<Set<string>> => {
+  const userId = auth.currentUser?.uid;
+  if (!userId) return new Set();
+  const colRef = collection(db, `users/${userId}/saved_channels`);
+  const snapshot = await getDocs(colRef);
+  return new Set(snapshot.docs.map((doc) => doc.id));
+};
 
 export const saveVideosToChannel = async (
   channelId: string,
@@ -121,12 +126,10 @@ export const saveVideosToChannel = async (
   return newVideos.length;
 };
 
-// services/firebase.ts
-
 export const getSavedVideosForChannel = async (
   channelId: string,
   limitCount: number,
-  lastVisibleDoc?: QueryDocumentSnapshot<DocumentData>, // Cursor for pagination
+  lastVisibleDoc?: QueryDocumentSnapshot<DocumentData>,
 ): Promise<{
   videos: YTVideo[];
   lastDoc: QueryDocumentSnapshot<DocumentData> | null;
@@ -165,69 +168,29 @@ export const isChannelExist = async (channelId: string): Promise<boolean> => {
   return docSnap.exists();
 };
 
-export const areChannelsExist = async (
-  channelIds: string[],
-): Promise<Record<string, boolean>> => {
-  const userId = auth.currentUser?.uid;
-  if (!userId || channelIds.length === 0) return {};
-
-  const limitedIds = channelIds.slice(0, 30);
-
-  const colRef = collection(db, `users/${userId}/saved_channels`);
-  const q = query(colRef, where(documentId(), "in", limitedIds));
-
-  const querySnapshot = await getDocs(q);
-
-  const results: Record<string, boolean> = {};
-
-  channelIds.forEach((id) => {
-    results[id] = false;
-  });
-
-  querySnapshot.forEach((doc) => {
-    results[doc.id] = true;
-  });
-
-  return results;
-};
-
-export const getLatestVideos = async (): Promise<YTVideo[]> => {
+export const getFeedVideos = async (): Promise<YTVideo[]> => {
   const userId = auth.currentUser?.uid;
   if (!userId) return [];
-  const channelsRef = collection(db, `users/${userId}/saved_channels`);
-  const channelsSnap = await getDocs(channelsRef);
 
-  const videoPromises = channelsSnap.docs.map(async (channelDoc) => {
-    const videosRef = collection(
-      db,
-      `users/${userId}/saved_channels/${channelDoc.id}/videos`,
-    );
-    const q = query(
-      videosRef,
-      orderBy("snippet.publishedAt", "desc"),
-      where("details.progressPercent", "==", 0),
-      where("details.isShorts", "==", false),
-      limit(1),
-    );
-    const videoSnap = await getDocs(q);
-
-    return videoSnap.docs.map((doc) => doc.data() as YTVideo)[0];
-  });
-
-  const results = await Promise.all(videoPromises);
-  return results
-    .filter(Boolean)
-    .sort(
-      (a, b) =>
-        new Date(b.snippet.publishedAt).getTime() -
-        new Date(a.snippet.publishedAt).getTime(),
-    );
+  const videosRef = collectionGroup(db, "videos");
+  const q = query(
+    videosRef,
+    where("userId", "==", userId),
+    where("details.isShorts", "==", false),
+    where("details.status", "in", ["next", "watching"]),
+    orderBy("details.status"),
+    orderBy("details.updatedAt", "desc"),
+  );
+  const snapshot = await getDocs(q);
+  const data = snapshot.docs.map((doc) => doc.data() as YTVideo);
+  return data;
 };
 
 export const updateVideoProgress = async (
   channelId: string,
   videoId: string,
   progress: { currentTime: number; percent: number },
+  status: ytVideoStatus,
 ) => {
   const userId = auth.currentUser?.uid;
   if (!userId) return;
@@ -243,73 +206,9 @@ export const updateVideoProgress = async (
       "details.lastPlayed": progress.currentTime,
       "details.progressPercent": progress.percent,
       "details.updatedAt": Date.now(),
+      "details.status": status,
     });
   } catch (error) {
     console.error("Error saving video progress:", error);
   }
 };
-
-export const getWatchingVideos = async (): Promise<YTVideo[]> => {
-  const userId = auth.currentUser?.uid;
-  if (!userId) return [];
-
-  const videosRef = collectionGroup(db, "videos");
-  const q = query(
-    videosRef,
-    where("userId", "==", userId),
-    where("details.progressPercent", ">", 0),
-    where("details.progressPercent", "<", 100),
-    orderBy("details.updatedAt", "desc"),
-    limit(100),
-  );
-
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map((doc) => doc.data() as YTVideo);
-};
-
-// export const getFeedVideos = async (): Promise<YTVideo[]> => {
-//   const userId = auth.currentUser?.uid;
-//   if (!userId) return [];
-
-//   const videosRef = collectionGroup(db, "videos");
-
-//   const q = query(
-//     videosRef,
-//     where("userId", "==", userId),
-//     where("details.progressPercent", "==", 0),
-//     orderBy("snippet.publishedAt", "desc"),
-//   );
-
-//   const querySnapshot = await getDocs(q);
-//   const data = querySnapshot.docs.map((doc) => doc.data() as YTVideo);
-//   return data;
-// };
-
-// export const migrateAllVideosProgress = async (newPercent: number = 0) => {
-//   const userId = auth.currentUser?.uid;
-//   if (!userId) throw new Error("User not authenticated");
-
-//   const videosRef = collectionGroup(db, "videos");
-//   const q = query(videosRef, where("userId", "==", userId));
-
-//   const querySnapshot = await getDocs(q);
-//   const docs = querySnapshot.docs;
-
-//   const chunks = [];
-//   for (let i = 0; i < docs.length; i += 500) {
-//     chunks.push(docs.slice(i, i + 500));
-//   }
-
-//   for (const chunk of chunks) {
-//     const batch = writeBatch(db);
-//     chunk.forEach((videoDoc) => {
-//       batch.update(videoDoc.ref, {
-//         "details.progressPercent": newPercent,
-//         "details.updatedAt": Date.now(),
-//       });
-//     });
-//     await batch.commit();
-//   }
-
-//   return docs.length;
-// };

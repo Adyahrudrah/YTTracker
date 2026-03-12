@@ -84,8 +84,11 @@ export const fetchChannelVideos = async (
     await yt.getVideoDetails(videoIds);
 
   const detailsMap = new Map(
-    contentDetails.items.map((item) => {
+    contentDetails.items.map((item, idx) => {
       const seconds = parseISO8601ToSeconds(item.contentDetails.duration);
+      const nextItem = contentDetails.items[idx + 1];
+      const prevItem = contentDetails.items[idx - 1];
+
       return [
         item.id,
         {
@@ -94,7 +97,10 @@ export const fetchChannelVideos = async (
           viewCount: item.statistics.viewCount,
           lastPlayed: 0,
           progressPercent: 0,
+          status: "queued",
           updatedAt: Date.now(),
+          nextId: nextItem ? nextItem.id : null,
+          prevId: prevItem ? prevItem.id : null,
         },
       ];
     }),

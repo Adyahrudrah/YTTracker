@@ -1,24 +1,25 @@
 // routes/saved-channels.tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { getSavedChannels, auth } from "../services/firebase"; // Ensure auth is exported
+import { auth } from "../services/firebase"; // Ensure auth is exported
 import { ChannelCard } from "../components/ChannelCard";
 import { Loader2, BookmarkX } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import { useState, useEffect } from "react";
+import { fbQueries } from "#/services/query-factory";
 
 export const Route = createFileRoute("/saved-channels")({
   component: SavedChannelsPage,
 });
 
 function SavedChannelsPage() {
-  const [userId, setUserId] = useState<string | null>(
-    auth.currentUser?.uid || null,
+  const [userId, setUserId] = useState<string | undefined>(
+    auth.currentUser?.uid || undefined,
   );
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUserId(user?.uid || null);
+      setUserId(user?.uid || undefined);
     });
     return () => unsubscribe();
   }, []);
@@ -27,11 +28,7 @@ function SavedChannelsPage() {
     data: saved,
     isLoading,
     isFetching,
-  } = useQuery({
-    queryKey: ["saved-channels", userId],
-    queryFn: getSavedChannels,
-    enabled: !!userId,
-  });
+  } = useQuery(fbQueries.savedYTChannels(userId));
 
   if (isLoading || (!userId && !saved)) {
     return (
