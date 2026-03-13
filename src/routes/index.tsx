@@ -69,7 +69,7 @@ function App() {
       ) : (
         <Tabs defaultValue="latest" className="w-full">
           <div className="flex justify-start mb-8">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-md grid-cols-2 ">
               <TabsTrigger value="latest" className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4" /> Latest
               </TabsTrigger>
@@ -108,7 +108,7 @@ function VideoGrid({
 }) {
   if (videos.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 border rounded-xl bg-muted/10">
+      <div className="flex flex-col items-center justify-center py-20 border rounded-xl bg-muted/10 p-6">
         <p className="text-muted-foreground">{emptyMessage}</p>
       </div>
     );

@@ -8,7 +8,6 @@ import {
   CheckCircle,
   RotateCcw,
   X,
-  User, // Added for channel icon
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { VideoPlayer } from "./VideoPlayer";
@@ -134,17 +133,6 @@ function VideoCard({ video }: VideoCardProps) {
           <div className="relative aspect-video overflow-hidden rounded-xl bg-muted">
             {/* Action Buttons Row */}
             <div className="z-20 absolute top-2 right-2 flex gap-1.5">
-              {/* GO TO CHANNEL BUTTON */}
-              <Link
-                to="/channel/$channelId"
-                params={{ channelId: snippet.channelId }}
-                onClick={(e) => e.stopPropagation()}
-                className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white shadow-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all hover:bg-white hover:text-black"
-                title="Go to Channel"
-              >
-                <User className="h-4 w-4" />
-              </Link>
-
               {/* Dismiss/Reset Button (The 'X') */}
               {hasProgress && (
                 <button
@@ -262,10 +250,10 @@ function VideoCard({ video }: VideoCardProps) {
         </Card>
       </DialogTrigger>
 
-      <DialogContent className="p-0 bg-black md:min-w-4xl border-none overflow-hidden sm:rounded-2xl">
+      <DialogContent className="p-0 bg-black md:min-w-4xl border-none overflow-hidden sm:rounded-2xl portrait:rotate-90 min-w-xl">
         <DialogTitle className="sr-only">{snippet.title}</DialogTitle>
         {isOpen && (
-          <div className="aspect-video w-full h-full">
+          <div className="aspect-video w-full h-full ">
             <VideoPlayer
               videoId={snippet.resourceId.videoId}
               onProgress={(p) => setCurrentProgress(p)}

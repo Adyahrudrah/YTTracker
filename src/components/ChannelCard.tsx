@@ -66,7 +66,7 @@ export function ChannelCard({ channel, isSaved }: ChannelCardProps) {
           {isPending ? (
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           ) : isSaved ? (
-            <BookmarkCheck className="h-5 w-5 text-blue-600 fill-blue-600" />
+            <BookmarkCheck className="h-5 w-5" />
           ) : (
             <Bookmark className="h-5 w-5 text-muted-foreground" />
           )}
@@ -82,11 +82,11 @@ export function ChannelCard({ channel, isSaved }: ChannelCardProps) {
           <AvatarFallback>{channel.snippet.title[0]}</AvatarFallback>
         </Avatar>
         <div className="flex flex-col pr-8">
-          <CardTitle className="text-lg line-clamp-1 group-hover:text-blue-600 transition-colors">
+          <CardTitle className="text-lg line-clamp-1 transition-colors">
             {channel.snippet.title}
           </CardTitle>
           <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1 font-medium text-blue-600">
+            <span className="flex items-center gap-1 font-medium ">
               <Users className="h-3.5 w-3.5" />
               {formatNumToShort(channel.statistics.subscriberCount)}
             </span>
