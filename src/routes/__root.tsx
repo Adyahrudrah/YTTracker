@@ -15,7 +15,7 @@ import appCss from "../styles.css?url";
 
 import type { QueryClient } from "@tanstack/react-query";
 import { Toaster } from "sonner";
-import MobileAside from "#/components/MobileAside";
+import MobileAside from "#/components/Footer";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "#/services/firebase";

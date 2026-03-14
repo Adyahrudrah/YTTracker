@@ -392,7 +392,7 @@ function ChannelVideosPage() {
       </Tabs>
 
       <footer className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 max-w-7xl">
-        <div className="max-w-7xl fixed bottom-5 w-full flex justify-center z-10">
+        <div className="max-w-7xl fixed bottom-24 w-full flex justify-center z-10">
           {!isFirebaseEmpty ? (
             <Button
               size="sm"

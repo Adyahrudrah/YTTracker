@@ -17,7 +17,6 @@ import {
   QueryDocumentSnapshot,
   type DocumentData,
   startAfter,
-  deleteDoc,
 } from "firebase/firestore";
 import {
   getAuth,
@@ -86,22 +85,36 @@ export const removeChannel = async (channelId: string) => {
   if (!userId) return;
 
   const channelRef = doc(db, `users/${userId}/saved_channels`, channelId);
-
   const videosRef = collection(
     db,
     `users/${userId}/saved_channels/${channelId}/videos`,
   );
 
   try {
-    await deleteDoc(doc(db, `users/${userId}/saved_channels`, channelId));
     const videoSnap = await getDocs(videosRef);
-    const batch = writeBatch(db);
-    videoSnap.docs.forEach((videoDoc) => {
-      batch.delete(videoDoc.ref);
-    });
+    const docs = videoSnap.docs;
+    const BATCH_LIMIT = 500;
 
-    batch.delete(channelRef);
-    await batch.commit();
+    for (let i = 0; i < docs.length; i += BATCH_LIMIT) {
+      const batch = writeBatch(db);
+      const chunk = docs.slice(i, i + BATCH_LIMIT);
+
+      chunk.forEach((videoDoc) => {
+        batch.delete(videoDoc.ref);
+      });
+
+      if (i + BATCH_LIMIT >= docs.length) {
+        batch.delete(channelRef);
+      }
+
+      await batch.commit();
+    }
+
+    if (docs.length === 0) {
+      const batch = writeBatch(db);
+      batch.delete(channelRef);
+      await batch.commit();
+    }
   } catch (error) {
     console.error("Error removing channel and its videos:", error);
     throw error;
