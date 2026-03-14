@@ -1,15 +1,13 @@
-import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   User as UserIcon,
-  Menu,
-  History,
+  Home,
   Bookmark,
   LogOut,
+  Settings,
 } from "lucide-react";
 import { type User } from "firebase/auth";
 import { logout } from "../services/firebase";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sheet,
@@ -18,84 +16,86 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 
-export default function MobileAside({ user }: { user: User | null }) {
-  const [open, setOpen] = useState(false);
-
-  if (!user) return null;
-
+export default function BottomNav({ user }: { user: User }) {
   const handleLogout = async () => {
     try {
       await logout();
-      setOpen(false);
     } catch (error) {
       console.error("Logout failed", error);
     }
   };
 
   const NAV_ITEMS = [
-    { label: "Feed", to: "/", icon: History },
-    { label: "Saved Channels", to: "/saved-channels", icon: Bookmark },
+    { label: "Feed", to: "/", icon: Home },
+    { label: "Saved", to: "/saved-channels", icon: Bookmark },
   ] as const;
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-full">
-          <Menu className="h-6 w-6" />
-        </Button>
-      </SheetTrigger>
-
-      <SheetContent side="right" className="w-75 sm:w-100 flex flex-col">
-        <SheetHeader className="text-left pb-6 border-b">
-          <SheetTitle className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border">
-              <AvatarImage src={user.photoURL || ""} />
-              <AvatarFallback className="bg-zinc-100 text-zinc-600">
-                {user.displayName?.charAt(0) || (
-                  <UserIcon className="h-5 w-5" />
-                )}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold truncate max-w-45">
-                {user.displayName}
-              </span>
-              <span className="text-xs text-muted-foreground truncate max-w-45">
-                {user.email}
-              </span>
-            </div>
-          </SheetTitle>
-        </SheetHeader>
-
-        <div className="flex flex-col gap-2 p-4 flex-1">
-          {NAV_ITEMS.map(({ label, to, icon: Icon }) => (
-            <Button
-              key={to}
-              variant="ghost"
-              className="justify-start gap-3 w-full text-base"
-              onClick={() => setOpen(false)}
-              asChild
-            >
-              <Link to={to}>
-                <Icon className="h-5 w-5" />
-                {label}
-              </Link>
-            </Button>
-          ))}
-        </div>
-
-        <div className="border-t p-4">
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3  hover:bg-red-50"
-            onClick={handleLogout}
+    <nav className="bg-background/80 backdrop-blur-md border-t pb-safe">
+      <div className="flex items-center justify-around h-16 max-w-md mx-auto">
+        {NAV_ITEMS.map(({ label, to, icon: Icon }) => (
+          <Link
+            key={to}
+            to={to}
+            className="flex flex-col items-center justify-center flex-1 h-full gap-1 text-muted-foreground transition-colors [&.active]:text-primary"
+            activeProps={{ className: "text-primary" }}
           >
-            <LogOut className="h-5 w-5" />
-            Sign Out
-          </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+            <Icon className="h-5 w-5" />
+            <span className="text-[10px] font-medium">{label}</span>
+          </Link>
+        ))}
+
+        {/* Profile Trigger */}
+        {user && (
+          <Sheet>
+            <SheetTrigger className="flex flex-col items-center justify-center flex-1 h-full gap-1 text-muted-foreground">
+              <Avatar className="h-6 w-6 border">
+                <AvatarImage src={user.photoURL || ""} />
+                <AvatarFallback className="text-[10px]">
+                  {user.displayName?.charAt(0) || (
+                    <UserIcon className="h-3 w-3" />
+                  )}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-[10px] font-medium">Profile</span>
+            </SheetTrigger>
+
+            <SheetContent side="bottom" className="rounded-t-[20px] px-6 pb-10">
+              <SheetHeader className="text-left py-4">
+                <SheetTitle className="flex items-center gap-4">
+                  <Avatar className="h-12 w-12 border">
+                    <AvatarImage src={user.photoURL || ""} />
+                    <AvatarFallback>
+                      {user.displayName?.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <span className="text-lg font-bold">
+                      {user.displayName}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {user.email}
+                    </span>
+                  </div>
+                </SheetTitle>
+              </SheetHeader>
+
+              <div className="space-y-2 mt-4">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 h-12 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-5 w-5" />
+                  Sign Out
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
+      </div>
+    </nav>
   );
 }

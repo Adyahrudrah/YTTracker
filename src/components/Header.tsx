@@ -1,22 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Search, Youtube } from "lucide-react";
-import { onAuthStateChanged, type User } from "firebase/auth";
-import { auth } from "#/services/firebase";
 import { Input } from "@/components/ui/input";
-import MobileAside from "./MobileAside";
 
 export default function DashboardHeader() {
-  const [user, setUser] = useState<User | null>(null);
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,8 +13,6 @@ export default function DashboardHeader() {
       navigate({ to: "/search", search: { q: query } });
     }
   };
-
-  if (!user) return;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 items-center flex justify-center">
@@ -52,11 +39,6 @@ export default function DashboardHeader() {
               onChange={(e) => setQuery(e.target.value)}
             />
           </form>
-        </div>
-
-        {/* Burger Menu Trigger */}
-        <div className="flex items-center gap-2">
-          <MobileAside user={user} />
         </div>
       </div>
     </header>

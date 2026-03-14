@@ -15,6 +15,10 @@ import appCss from "../styles.css?url";
 
 import type { QueryClient } from "@tanstack/react-query";
 import { Toaster } from "sonner";
+import MobileAside from "#/components/MobileAside";
+import { useEffect, useState } from "react";
+import { onAuthStateChanged, type User } from "firebase/auth";
+import { auth } from "#/services/firebase";
 
 interface MyRouterContext {
   queryClient: QueryClient;
@@ -48,6 +52,15 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -56,8 +69,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="font-sans antialiased wrap-anywhere selection:bg-[rgba(79,184,178,0.24)]">
         <TanStackQueryProvider>
-          <Header />
+          {user && <Header />}
           {children}
+          {user && (
+            <div className="fixed bottom-0 left-0 right-0 z-50 ">
+              <MobileAside user={user} />
+            </div>
+          )}
+
           {/* <TanStackDevtools
             config={{
               position: "bottom-right",
