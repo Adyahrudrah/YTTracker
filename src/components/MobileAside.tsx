@@ -1,11 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import {
-  User as UserIcon,
-  Home,
-  Bookmark,
-  LogOut,
-  Settings,
-} from "lucide-react";
+import { User as UserIcon, Home, Bookmark, LogOut } from "lucide-react";
 import { type User } from "firebase/auth";
 import { logout } from "../services/firebase";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
