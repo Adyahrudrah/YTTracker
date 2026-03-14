@@ -13,6 +13,7 @@ import {
   Smartphone,
   PlayCircle,
   SortAsc,
+  LucideEye,
 } from "lucide-react";
 import { useMemo, useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
@@ -47,6 +48,8 @@ function ChannelVideosPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
+  const [activeTab, setActiveTab] = useState("videos");
+  const [isTabEmptyOrSmall, setIsTabEmptyOrSmall] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("time");
   const [shouldLoadAll, setShouldLoadAll] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -119,7 +122,12 @@ function ChannelVideosPage() {
     if (inView) {
       if (isFirebaseEmpty && hasNextYtPage && !isFetchingYtNext) {
         fetchNextYtPage();
-      } else if (!isFirebaseEmpty && hasNextSavedPage && !isFetchingSavedNext) {
+      } else if (
+        !isTabEmptyOrSmall &&
+        !isFirebaseEmpty &&
+        hasNextSavedPage &&
+        !isFetchingSavedNext
+      ) {
         fetchNextSavedPage();
       }
     }
@@ -259,6 +267,15 @@ function ChannelVideosPage() {
       ),
     [allVideos],
   );
+
+  const watchedOnly = useMemo(
+    () =>
+      allVideos.filter(
+        (v) => !v.details.isShorts && v.details.status === "finished",
+      ),
+    [allVideos],
+  );
+
   const shortsOnly = useMemo(
     () =>
       allVideos.filter(
@@ -266,6 +283,14 @@ function ChannelVideosPage() {
       ),
     [allVideos],
   );
+
+  useEffect(() => {
+    const t =
+      (activeTab === "videos" && videosOnly.length < 12) ||
+      (activeTab === "watched" && watchedOnly.length < 12) ||
+      (activeTab === "shorts" && shortsOnly.length < 12);
+    setIsTabEmptyOrSmall(t);
+  }, [videosOnly, watchedOnly, shortsOnly]);
 
   if (isLoadingYt || isLoadingSaved) {
     return (
@@ -281,41 +306,30 @@ function ChannelVideosPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <header className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6">
-        <div className="flex flex-col items-center py-10 bg-muted/30 rounded-lg mb-8 border-2 border-dashed w-full">
-          {!isFirebaseEmpty ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refreshForNew()}
-              disabled={isRefreshing}
+      <Tabs
+        defaultValue="videos"
+        className="w-full"
+        onValueChange={setActiveTab}
+      >
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <TabsList className="grid w-full max-w-100 grid-cols-3 ">
+            <TabsTrigger
+              value="videos"
+              className="flex items-center gap-2 text-xs"
             >
-              <RefreshCw
-                className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-              />
-              Check for New
-            </Button>
-          ) : hasNextYtPage && shouldLoadAll ? (
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm font-medium">Syncing items...</p>
-            </div>
-          ) : (
-            <Button onClick={() => setShouldLoadAll(true)} size="lg">
-              <RefreshCw className="mr-2 h-4 w-4" /> Sync Full Channel
-            </Button>
-          )}
-        </div>
-      </header>
-
-      <Tabs defaultValue="videos" className="w-full">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-          <TabsList className="grid w-full max-w-100 grid-cols-2">
-            <TabsTrigger value="videos" className="flex items-center gap-2">
               <PlayCircle className="h-4 w-4" /> Videos ({videosOnly.length})
             </TabsTrigger>
-            <TabsTrigger value="shorts" className="flex items-center gap-2">
+            <TabsTrigger
+              value="shorts"
+              className="flex items-center gap-2 text-xs"
+            >
               <Smartphone className="h-4 w-4" /> Shorts ({shortsOnly.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="watched"
+              className="flex items-center gap-2 text-xs"
+            >
+              <LucideEye className="h-4 w-4" /> Watched ({watchedOnly.length})
             </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
@@ -358,12 +372,50 @@ function ChannelVideosPage() {
           </div>
         </TabsContent>
 
+        <TabsContent
+          value="watched"
+          className="m-0 p-0 border-none outline-none"
+        >
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {watchedOnly.map((v) => (
+              <VideoCard video={v} key={v.snippet.resourceId.videoId} />
+            ))}
+          </div>
+        </TabsContent>
+
         <div ref={ref} className="h-20 flex items-center justify-center mt-8">
-          {(hasNextSavedPage || (isFirebaseEmpty && hasNextYtPage)) && (
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          )}
+          {(hasNextSavedPage || (isFirebaseEmpty && hasNextYtPage)) &&
+            !isTabEmptyOrSmall && (
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            )}
         </div>
       </Tabs>
+
+      <footer className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 max-w-7xl">
+        <div className="max-w-7xl fixed bottom-5 w-full flex justify-center z-10">
+          {!isFirebaseEmpty ? (
+            <Button
+              size="sm"
+              onClick={() => refreshForNew()}
+              disabled={isRefreshing}
+            >
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+              />
+              Check for New `({allVideos.length})`
+            </Button>
+          ) : hasNextYtPage && shouldLoadAll ? (
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm font-medium">Syncing items...</p>
+            </div>
+          ) : (
+            <Button onClick={() => setShouldLoadAll(true)} size="lg">
+              <RefreshCw className="mr-2 h-4 w-4" /> Sync Full Channel
+            </Button>
+          )}
+        </div>
+      </footer>
     </div>
   );
 }

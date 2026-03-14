@@ -2,7 +2,6 @@
 import { initializeApp } from "firebase/app";
 import {
   collection,
-  deleteDoc,
   doc,
   getDocs,
   getFirestore,
@@ -18,6 +17,7 @@ import {
   QueryDocumentSnapshot,
   type DocumentData,
   startAfter,
+  deleteDoc,
 } from "firebase/firestore";
 import {
   getAuth,
@@ -79,10 +79,33 @@ export const saveChannel = async (channel: YTChannel) => {
   });
 };
 
+// services/firebase.ts
+
 export const removeChannel = async (channelId: string) => {
   const userId = auth.currentUser?.uid;
   if (!userId) return;
-  await deleteDoc(doc(db, `users/${userId}/saved_channels`, channelId));
+
+  const channelRef = doc(db, `users/${userId}/saved_channels`, channelId);
+
+  const videosRef = collection(
+    db,
+    `users/${userId}/saved_channels/${channelId}/videos`,
+  );
+
+  try {
+    await deleteDoc(doc(db, `users/${userId}/saved_channels`, channelId));
+    const videoSnap = await getDocs(videosRef);
+    const batch = writeBatch(db);
+    videoSnap.docs.forEach((videoDoc) => {
+      batch.delete(videoDoc.ref);
+    });
+
+    batch.delete(channelRef);
+    await batch.commit();
+  } catch (error) {
+    console.error("Error removing channel and its videos:", error);
+    throw error;
+  }
 };
 
 export const getSavedChannels = async (): Promise<YTChannel[]> => {

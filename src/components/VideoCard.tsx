@@ -132,7 +132,7 @@ function VideoCard({ video }: VideoCardProps) {
         <Card className="group cursor-pointer overflow-hidden border-none bg-transparent hover:bg-accent/10 transition-colors duration-300">
           <div className="relative aspect-video overflow-hidden rounded-xl bg-muted">
             {/* Action Buttons Row */}
-            <div className="z-20 absolute top-2 right-2 flex gap-1.5">
+            <div className="z-10 absolute top-2 right-2 flex gap-1.5">
               {/* Dismiss/Reset Button (The 'X') */}
               {hasProgress && (
                 <button
@@ -143,6 +143,21 @@ function VideoCard({ video }: VideoCardProps) {
                   <X className="h-4 w-4" />
                 </button>
               )}
+
+              {/* External Link Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openYtExt(
+                    video.snippet.resourceId.videoId,
+                    details?.lastPlayed,
+                  );
+                }}
+                className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white shadow-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity hover:bg-primary"
+                title="Open in YouTube"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </button>
 
               {/* Toggle Watched Button */}
               <button
@@ -161,21 +176,6 @@ function VideoCard({ video }: VideoCardProps) {
                 ) : (
                   <CheckCircle className="h-4 w-4" />
                 )}
-              </button>
-
-              {/* External Link Button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openYtExt(
-                    video.snippet.resourceId.videoId,
-                    details?.lastPlayed,
-                  );
-                }}
-                className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white shadow-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity hover:bg-primary"
-                title="Open in YouTube"
-              >
-                <ExternalLink className="h-4 w-4" />
               </button>
             </div>
 
@@ -250,7 +250,7 @@ function VideoCard({ video }: VideoCardProps) {
         </Card>
       </DialogTrigger>
 
-      <DialogContent className="p-0 bg-black md:min-w-4xl border-none overflow-hidden sm:rounded-2xl portrait:rotate-90 portrait:min-w-dvh portrait:max-h-dvw [&>button]:left-5">
+      <DialogContent className="p-0 bg-black md:min-w-4xl border-none overflow-hidden sm:rounded-2xl portrait:rotate-90 portrait:min-w-dvh portrait:max-h-dvw [&>button]:left-5 [&>button]:w-max">
         <DialogTitle className="sr-only">{snippet.title}</DialogTitle>
         {isOpen && (
           <div className="w-full h-full ">
