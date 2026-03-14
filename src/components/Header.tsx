@@ -46,7 +46,7 @@ export default function DashboardHeader() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-red-600 transition-colors" />
             <Input
               type="search"
-              placeholder="Search YouTube Channels"
+              placeholder="Search YouTube Channel"
               className="w-full pl-9 bg-muted/50 rounded-full focus-visible:ring-red-600"
               value={query}
               onChange={(e) => setQuery(e.target.value)}

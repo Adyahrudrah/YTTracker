@@ -221,11 +221,24 @@ function ChannelVideosPage() {
     mutationFn: async () => {
       const latestVideoDate =
         allVideos.length > 0 ? allVideos[0].snippet.publishedAt : undefined;
-      return (await fetchChannelVideos(channelId, undefined, latestVideoDate))
-        .videos;
+      const response = await fetchChannelVideos(
+        channelId,
+        undefined,
+        latestVideoDate,
+      );
+      const newVideos = response.videos;
+
+      // 2. If there are new videos, save them to Firebase immediately
+      if (newVideos.length > 0 && userId) {
+        await saveVideosToChannel(channelId, newVideos, existingIds);
+      }
+
+      return newVideos;
     },
+
     onSuccess: (newVideos) => {
       if (newVideos.length === 0) return toast.info("No new videos found.");
+
       queryClient.invalidateQueries({
         queryKey: ["saved-videos-infinite", channelId],
       });
@@ -234,11 +247,17 @@ function ChannelVideosPage() {
   });
 
   const videosOnly = useMemo(
-    () => allVideos.filter((v) => !v.details.isShorts),
+    () =>
+      allVideos.filter(
+        (v) => !v.details.isShorts && v.details.status === "queued",
+      ),
     [allVideos],
   );
   const shortsOnly = useMemo(
-    () => allVideos.filter((v) => v.details.isShorts),
+    () =>
+      allVideos.filter(
+        (v) => v.details.isShorts && v.details.status === "queued",
+      ),
     [allVideos],
   );
 

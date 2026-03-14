@@ -115,7 +115,8 @@ export const fetchChannelVideos = async (
   let reachedKnownVideo = false;
 
   if (sinceDate) {
-    const sinceTime = sinceDate.getTime();
+    const sinceTime = new Date(sinceDate).getTime();
+
     const cutoffIndex = videos.findIndex(
       (v) => new Date(v.snippet.publishedAt).getTime() <= sinceTime,
     );
