@@ -37,7 +37,7 @@ export const fbQueries = {
       enabled: !!userId,
     }),
 
-  isChannelExist: (channelId: string, userId: string | undefined) =>
+  isChannelExist: (channelId: string, userId: string | null | undefined) =>
     queryOptions({
       queryKey: ["is-channel-exist", channelId, userId],
       queryFn: () => isChannelExist(channelId),

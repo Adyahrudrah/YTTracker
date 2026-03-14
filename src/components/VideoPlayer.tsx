@@ -89,7 +89,7 @@ export function VideoPlayer({
   };
 
   return (
-    <div className="aspect-video w-full overflow-hidden rounded-xl bg-black shadow-2xl">
+    <div className="md:aspect-video portrait:h-dvw w-full overflow-hidden rounded-xl bg-black shadow-2xl">
       <YouTube
         videoId={videoId}
         opts={opts}

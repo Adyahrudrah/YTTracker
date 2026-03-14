@@ -250,10 +250,10 @@ function VideoCard({ video }: VideoCardProps) {
         </Card>
       </DialogTrigger>
 
-      <DialogContent className="p-0 bg-black md:min-w-4xl border-none overflow-hidden sm:rounded-2xl portrait:rotate-90 min-w-xl">
+      <DialogContent className="p-0 bg-black md:min-w-4xl border-none overflow-hidden sm:rounded-2xl portrait:rotate-90 portrait:min-w-dvh portrait:max-h-dvw [&>button]:left-5">
         <DialogTitle className="sr-only">{snippet.title}</DialogTitle>
         {isOpen && (
-          <div className="aspect-video w-full h-full ">
+          <div className="w-full h-full ">
             <VideoPlayer
               videoId={snippet.resourceId.videoId}
               onProgress={(p) => setCurrentProgress(p)}

@@ -52,6 +52,22 @@ const googleProvider = new GoogleAuthProvider();
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const logout = () => signOut(auth);
 
+// services/firebase.ts
+
+// Helper to ensure auth is initialized before running queries
+export const getUserId = (): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      unsubscribe();
+      if (user) {
+        resolve(user.uid);
+      } else {
+        reject("User not authenticated");
+      }
+    });
+  });
+};
+
 export const saveChannel = async (channel: YTChannel) => {
   const userId = auth.currentUser?.uid;
   if (!userId) throw new Error("User not authenticated");
@@ -70,7 +86,7 @@ export const removeChannel = async (channelId: string) => {
 };
 
 export const getSavedChannels = async (): Promise<YTChannel[]> => {
-  const userId = auth.currentUser?.uid;
+  const userId = await getUserId();
   if (!userId) return [];
 
   const q = query(collection(db, `users/${userId}/saved_channels`));
@@ -134,7 +150,7 @@ export const getSavedVideosForChannel = async (
   videos: YTVideo[];
   lastDoc: QueryDocumentSnapshot<DocumentData> | null;
 }> => {
-  const userId = auth.currentUser?.uid;
+  const userId = await getUserId();
   if (!userId) return { videos: [], lastDoc: null };
 
   const vidsRef = collection(

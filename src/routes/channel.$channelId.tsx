@@ -19,8 +19,8 @@ import { useInView } from "react-intersection-observer";
 import { toast } from "sonner";
 import VideoCard from "#/components/VideoCard";
 import {
-  auth,
   getSavedVideosForChannel,
+  getUserId,
   saveVideosToChannel,
 } from "#/services/firebase";
 import { VideoCardSkeleton } from "#/components/ui/skeletons.tsx/dd";
@@ -44,13 +44,20 @@ type SortOption = "time" | "views" | "duration";
 
 function ChannelVideosPage() {
   const { channelId } = Route.useParams();
-  const userId = auth.currentUser?.uid;
+  const [userId, setUserId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const [sortBy, setSortBy] = useState<SortOption>("time");
   const [shouldLoadAll, setShouldLoadAll] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    const handleUserId = async () => {
+      const userId = await getUserId();
+      setUserId(userId);
+    };
+    handleUserId();
+  }, []);
   const { ref, inView } = useInView({
     threshold: 0.1,
     rootMargin: "400px",
@@ -228,7 +235,6 @@ function ChannelVideosPage() {
       );
       const newVideos = response.videos;
 
-      // 2. If there are new videos, save them to Firebase immediately
       if (newVideos.length > 0 && userId) {
         await saveVideosToChannel(channelId, newVideos, existingIds);
       }
@@ -275,24 +281,31 @@ function ChannelVideosPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <header className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 border-b pb-8">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Channel Feed</h1>
-          <p className="text-sm text-muted-foreground">
-            {allVideos.length} items loaded
-          </p>
+      <header className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6">
+        <div className="flex flex-col items-center py-10 bg-muted/30 rounded-lg mb-8 border-2 border-dashed w-full">
+          {!isFirebaseEmpty ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refreshForNew()}
+              disabled={isRefreshing}
+            >
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+              />
+              Check for New
+            </Button>
+          ) : hasNextYtPage && shouldLoadAll ? (
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm font-medium">Syncing items...</p>
+            </div>
+          ) : (
+            <Button onClick={() => setShouldLoadAll(true)} size="lg">
+              <RefreshCw className="mr-2 h-4 w-4" /> Sync Full Channel
+            </Button>
+          )}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refreshForNew()}
-          disabled={isRefreshing}
-        >
-          <RefreshCw
-            className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-          />
-          Check for New
-        </Button>
       </header>
 
       <Tabs defaultValue="videos" className="w-full">
@@ -322,21 +335,6 @@ function ChannelVideosPage() {
             </Select>
           </div>
         </div>
-
-        {isFirebaseEmpty && hasNextYtPage && (
-          <div className="flex flex-col items-center py-10 bg-muted/30 rounded-lg mb-8 border-2 border-dashed">
-            {shouldLoadAll ? (
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm font-medium">Syncing items...</p>
-              </div>
-            ) : (
-              <Button onClick={() => setShouldLoadAll(true)} size="lg">
-                <RefreshCw className="mr-2 h-4 w-4" /> Sync Full Channel
-              </Button>
-            )}
-          </div>
-        )}
 
         <TabsContent
           value="videos"
