@@ -77,48 +77,70 @@ export const fetchChannelVideos = async (
   const uploadsId = channelId.replace(/^UC/, "UU");
   const data = await yt.getPlaylistItems(uploadsId, pageToken);
 
+  if (!data.items?.length) {
+    return {
+      videos: [],
+      nextPageToken: data.nextPageToken,
+      prevPageToken: data.prevPageToken,
+      reachedKnownVideo: false,
+    };
+  }
+
   const videoIds = data.items
     .map((v: YTVideo) => v.snippet.resourceId.videoId)
     .join(",");
   const contentDetails: YTVideoContentResponse =
     await yt.getVideoDetails(videoIds);
 
+  const longFormVideos = contentDetails.items.filter((item) => {
+    const seconds = parseISO8601ToSeconds(item.contentDetails.duration);
+    return seconds > 60;
+  });
+
+  console.log(longFormVideos);
+
   const detailsMap = new Map(
-    contentDetails.items.map((item, idx) => {
+    contentDetails.items.map((item) => {
       const seconds = parseISO8601ToSeconds(item.contentDetails.duration);
-      const nextItem = contentDetails.items[idx + 1];
-      const prevItem = contentDetails.items[idx - 1];
+      const isShorts = seconds > 0 && seconds <= 60;
+
+      let nextId = null;
+      let prevId = null;
+
+      if (!isShorts) {
+        const currentIdx = longFormVideos.findIndex((v) => v.id === item.id);
+        nextId = longFormVideos[currentIdx + 1]?.id || null;
+        prevId = longFormVideos[currentIdx - 1]?.id || null;
+      }
 
       return [
         item.id,
         {
-          isShorts: seconds > 0 && seconds <= 60,
+          isShorts,
           duration: item.contentDetails.duration,
           viewCount: item.statistics.viewCount,
           lastPlayed: 0,
           progressPercent: 0,
           status: "queued",
           updatedAt: Date.now(),
-          nextId: nextItem ? nextItem.id : null,
-          prevId: prevItem ? prevItem.id : null,
+          nextId,
+          prevId,
         },
       ];
     }),
   );
 
-  let videos: YTVideo[] = (data.items || []).map((item: YTVideo) => ({
+  let videos = data.items.map((item: YTVideo) => ({
     id: { videoId: item.snippet.resourceId.videoId },
     snippet: item.snippet,
     details: detailsMap.get(item.snippet.resourceId.videoId),
   }));
 
   let reachedKnownVideo = false;
-
   if (sinceDate) {
-    const sinceTime = new Date(sinceDate).getTime();
-
+    const sinceTime = sinceDate.getTime();
     const cutoffIndex = videos.findIndex(
-      (v) => new Date(v.snippet.publishedAt).getTime() <= sinceTime,
+      (v: YTVideo) => new Date(v.snippet.publishedAt).getTime() <= sinceTime,
     );
 
     if (cutoffIndex !== -1) {

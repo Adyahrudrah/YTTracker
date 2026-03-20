@@ -210,6 +210,26 @@ export const getSavedVideosForChannel = async (
   return { videos, lastDoc };
 };
 
+export const getVideo = async (channelId: string, videoId: string) => {
+  const userId = await getUserId();
+  if (!userId) return;
+
+  const vidsRef = collection(
+    db,
+    `users/${userId}/saved_channels/${channelId}/videos`,
+  );
+
+  let q = query(
+    vidsRef,
+    orderBy("id.videoId", "desc"),
+    where("id.videoId", "==", videoId),
+  );
+
+  const snapshot = await getDocs(q);
+  const video = snapshot.docs.map((doc) => doc.data() as YTVideo);
+  return video;
+};
+
 export const isChannelExist = async (channelId: string): Promise<boolean> => {
   const userId = auth.currentUser?.uid;
   if (!userId) return false;

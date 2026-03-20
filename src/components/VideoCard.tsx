@@ -19,7 +19,7 @@ import {
 } from "#/utils/base";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
-import { updateVideoProgress } from "#/services/firebase";
+import { getVideo, updateVideoProgress } from "#/services/firebase";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "#/lib/utils";
 import { Link } from "@tanstack/react-router"; // Added for navigation
@@ -73,14 +73,22 @@ function VideoCard({ video }: VideoCardProps) {
     }
   };
 
-  const handleToggleWatched = (e: React.MouseEvent) => {
+  const handleToggleWatched = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const newPercent = isFullyWatched ? 0 : 100;
-    handleUpdateProgress(
+    let isNext = false;
+
+    if (video.details.nextId) {
+      const v = await getVideo(video.snippet.channelId, video.details.nextId);
+      isNext = v && v[0].details.progressPercent === 0 ? true : false;
+      console.log(v, isNext);
+    }
+    console.log(video);
+    await handleUpdateProgress(
       newPercent,
       newPercent === 100 ? "Marked as watched" : "Progress cleared",
       newPercent === 100 ? "finished" : "queued",
-      video.details.nextId,
+      isNext ? video.details.nextId : null,
     );
   };
 
@@ -106,7 +114,17 @@ function VideoCard({ video }: VideoCardProps) {
           isFinished ? "finished" : "watching",
         );
 
-        if (isFinished && video.details.nextId) {
+        let isNext = false;
+
+        if (video.details.nextId) {
+          const v = await getVideo(
+            video.snippet.channelId,
+            video.details.nextId,
+          );
+          isNext = v && v[0].details.progressPercent === 0 ? true : false;
+        }
+
+        if (isFinished && video.details.nextId && isNext) {
           await updateVideoProgress(
             snippet.channelId,
             video.details.nextId,
