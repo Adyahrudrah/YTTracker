@@ -97,8 +97,6 @@ export const fetchChannelVideos = async (
     return seconds > 60;
   });
 
-  console.log(longFormVideos);
-
   const detailsMap = new Map(
     contentDetails.items.map((item) => {
       const seconds = parseISO8601ToSeconds(item.contentDetails.duration);
@@ -137,6 +135,8 @@ export const fetchChannelVideos = async (
   }));
 
   let reachedKnownVideo = false;
+  console.log(sinceDate);
+
   if (sinceDate) {
     const sinceTime = sinceDate.getTime();
     const cutoffIndex = videos.findIndex(

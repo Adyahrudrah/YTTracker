@@ -235,12 +235,15 @@ function ChannelVideosPage() {
   const { mutate: refreshForNew, isPending: isRefreshing } = useMutation({
     mutationFn: async () => {
       const latestVideoDate =
-        allVideos.length > 0 ? allVideos[0].snippet.publishedAt : undefined;
+        allVideos.length > 0
+          ? new Date(allVideos[0].snippet.publishedAt)
+          : undefined;
       const response = await fetchChannelVideos(
         channelId,
         undefined,
         latestVideoDate,
       );
+
       const newVideos = response.videos;
 
       if (newVideos.length > 0 && userId) {
