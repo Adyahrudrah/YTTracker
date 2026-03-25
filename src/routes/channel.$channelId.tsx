@@ -289,9 +289,9 @@ function ChannelVideosPage() {
 
   useEffect(() => {
     const t =
-      (activeTab === "videos" && videosOnly.length < 12) ||
-      (activeTab === "watched" && watchedOnly.length < 12) ||
-      (activeTab === "shorts" && shortsOnly.length < 12);
+      (activeTab === "videos" && videosOnly.length < 6) ||
+      (activeTab === "watched" && watchedOnly.length < 6) ||
+      (activeTab === "shorts" && shortsOnly.length < 6);
     setIsTabEmptyOrSmall(t);
   }, [videosOnly, watchedOnly, shortsOnly]);
 

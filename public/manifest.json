@@ -2,7 +2,7 @@
   "name": "YT Tracker",
   "short_name": "YTT",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#000000",
   "theme_color": "#000000",
   "icons": [
