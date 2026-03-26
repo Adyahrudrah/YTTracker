@@ -7,7 +7,12 @@ export interface YTPlayListResponse {
   pageInfo: PageInfo;
 }
 
-export type ytVideoStatus = "queued" | "watching" | "next" | "finished";
+export type ytVideoStatus =
+  | "queued"
+  | "watching"
+  | "next"
+  | "finished"
+  | "watch";
 
 export interface YTVideo {
   kind: string;

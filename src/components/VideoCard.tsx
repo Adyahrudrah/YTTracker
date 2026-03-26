@@ -8,6 +8,8 @@ import {
   CheckCircle,
   RotateCcw,
   X,
+  ListPlus,
+  ListMinus,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { VideoPlayer } from "./VideoPlayer";
@@ -40,6 +42,7 @@ function VideoCard({ video }: VideoCardProps) {
   const isFullyWatched = details?.progressPercent === 100;
   const hasProgress =
     details?.progressPercent !== undefined && details.progressPercent > 0;
+  const isInList = video.details.status === "watch";
 
   const handleUpdateProgress = async (
     percent: number,
@@ -81,14 +84,22 @@ function VideoCard({ video }: VideoCardProps) {
     if (video.details.nextId) {
       const v = await getVideo(video.snippet.channelId, video.details.nextId);
       isNext = v && v[0].details.progressPercent === 0 ? true : false;
-      console.log(v, isNext);
     }
-    console.log(video);
     await handleUpdateProgress(
       newPercent,
       newPercent === 100 ? "Marked as watched" : "Progress cleared",
       newPercent === 100 ? "finished" : "queued",
       isNext ? video.details.nextId : null,
+    );
+  };
+
+  const handleToggleWatchList = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await handleUpdateProgress(
+      0,
+      isInList ? "Removed from WatchList" : "Added to WatchList",
+      isInList ? "queued" : "watch",
+      null,
     );
   };
 
@@ -161,6 +172,18 @@ function VideoCard({ video }: VideoCardProps) {
                   <X className="h-4 w-4" />
                 </button>
               )}
+
+              <button
+                onClick={handleToggleWatchList}
+                className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white shadow-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all hover:bg-foreground hover:text-accent"
+                title={!isInList ? "Add to WatchList" : "Remove from WatchList"}
+              >
+                {!isInList ? (
+                  <ListPlus className="h-4 w-4" />
+                ) : (
+                  <ListMinus className="h-4 w-4" />
+                )}
+              </button>
 
               {/* External Link Button */}
               <button

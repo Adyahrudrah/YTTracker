@@ -279,10 +279,10 @@ function ChannelVideosPage() {
     [allVideos],
   );
 
-  const shortsOnly = useMemo(
+  const watchListOnly = useMemo(
     () =>
       allVideos.filter(
-        (v) => v.details.isShorts && v.details.status === "queued",
+        (v) => !v.details.isShorts && v.details.status === "watch",
       ),
     [allVideos],
   );
@@ -291,9 +291,9 @@ function ChannelVideosPage() {
     const t =
       (activeTab === "videos" && videosOnly.length < 6) ||
       (activeTab === "watched" && watchedOnly.length < 6) ||
-      (activeTab === "shorts" && shortsOnly.length < 6);
+      (activeTab === "shorts" && watchListOnly.length < 6);
     setIsTabEmptyOrSmall(t);
-  }, [videosOnly, watchedOnly, shortsOnly]);
+  }, [videosOnly, watchedOnly, watchListOnly]);
 
   if (isLoadingYt || isLoadingSaved) {
     return (
@@ -320,13 +320,13 @@ function ChannelVideosPage() {
               value="videos"
               className="flex items-center gap-2 text-xs"
             >
-              <PlayCircle className="h-4 w-4" /> Videos ({videosOnly.length})
+              <PlayCircle className="h-4 w-4" /> Queue ({videosOnly.length})
             </TabsTrigger>
             <TabsTrigger
               value="shorts"
               className="flex items-center gap-2 text-xs"
             >
-              <Smartphone className="h-4 w-4" /> Shorts ({shortsOnly.length})
+              <Smartphone className="h-4 w-4" /> Watch ({watchListOnly.length})
             </TabsTrigger>
             <TabsTrigger
               value="watched"
@@ -369,7 +369,7 @@ function ChannelVideosPage() {
           className="m-0 p-0 border-none outline-none"
         >
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {shortsOnly.map((v) => (
+            {watchListOnly.map((v) => (
               <VideoCard video={v} key={v.snippet.resourceId.videoId} />
             ))}
           </div>
