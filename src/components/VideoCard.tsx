@@ -21,7 +21,7 @@ import {
 } from "#/utils/base";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
-import { getVideo, updateVideoProgress } from "#/services/firebase";
+import { updateVideoProgress } from "#/services/firebase";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "#/lib/utils";
 import { Link } from "@tanstack/react-router"; // Added for navigation
@@ -48,7 +48,6 @@ function VideoCard({ video }: VideoCardProps) {
     percent: number,
     message: string,
     status: ytVideoStatus,
-    nextId: string | null,
   ) => {
     try {
       await updateVideoProgress(
@@ -57,14 +56,7 @@ function VideoCard({ video }: VideoCardProps) {
         { currentTime: 0, percent },
         status,
       );
-      if (nextId) {
-        await updateVideoProgress(
-          snippet.channelId,
-          nextId,
-          { currentTime: 0, percent: 0 },
-          "next",
-        );
-      }
+
       queryClient.invalidateQueries({ queryKey: ["feed-videos"] });
       queryClient.invalidateQueries({
         queryKey: ["saved-videos-infinite", snippet.channelId],
@@ -79,17 +71,11 @@ function VideoCard({ video }: VideoCardProps) {
   const handleToggleWatched = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const newPercent = isFullyWatched ? 0 : 100;
-    let isNext = false;
 
-    if (video.details.nextId) {
-      const v = await getVideo(video.snippet.channelId, video.details.nextId);
-      isNext = v && v[0].details.progressPercent === 0 ? true : false;
-    }
     await handleUpdateProgress(
       newPercent,
       newPercent === 100 ? "Marked as watched" : "Progress cleared",
       newPercent === 100 ? "finished" : "queued",
-      isNext ? video.details.nextId : null,
     );
   };
 
@@ -99,13 +85,12 @@ function VideoCard({ video }: VideoCardProps) {
       0,
       isInList ? "Removed from WatchList" : "Added to WatchList",
       isInList ? "queued" : "watch",
-      null,
     );
   };
 
   const handleDismissProgress = (e: React.MouseEvent) => {
     e.stopPropagation();
-    handleUpdateProgress(0, "Removed from continue watching", "queued", null);
+    handleUpdateProgress(0, "Removed from continue watching", "queued");
   };
 
   const handleDialogChange = async (open: boolean) => {
@@ -117,7 +102,6 @@ function VideoCard({ video }: VideoCardProps) {
       const videoId = video.snippet.resourceId.videoId;
 
       try {
-        // Update Current
         await updateVideoProgress(
           snippet.channelId,
           videoId,
@@ -125,26 +109,6 @@ function VideoCard({ video }: VideoCardProps) {
           isFinished ? "finished" : "watching",
         );
 
-        let isNext = false;
-
-        if (video.details.nextId) {
-          const v = await getVideo(
-            video.snippet.channelId,
-            video.details.nextId,
-          );
-          isNext = v && v[0].details.progressPercent === 0 ? true : false;
-        }
-
-        if (isFinished && video.details.nextId && isNext) {
-          await updateVideoProgress(
-            snippet.channelId,
-            video.details.nextId,
-            { currentTime: 0, percent: 0 },
-            "next",
-          );
-        }
-
-        // Single point of invalidation
         queryClient.invalidateQueries({ queryKey: ["feed-videos"] });
         queryClient.invalidateQueries({
           queryKey: ["saved-videos-infinite", snippet.channelId],

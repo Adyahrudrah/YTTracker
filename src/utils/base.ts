@@ -7,13 +7,22 @@ export const formatNumToShort = (count: string) => {
 };
 
 export const formatYouTubeDuration = (duration: string) => {
-  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  const match = duration.match(
+    /P(?:(\d+)D)?T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/,
+  );
   if (!match) return "";
-  const [, hours, minutes, seconds] = match.map((x) => parseInt(x) || 0);
 
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  const [days, hours, minutes, seconds] = match
+    .slice(1)
+    .map((x) => parseInt(x) || 0);
+
+  // Convert days into total hours
+  const totalHours = days * 24 + hours;
+
+  if (totalHours > 0) {
+    return `${totalHours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   }
+
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 

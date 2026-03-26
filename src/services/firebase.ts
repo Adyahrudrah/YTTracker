@@ -249,7 +249,7 @@ export const getFeedVideos = async (): Promise<YTVideo[]> => {
     videosRef,
     where("userId", "==", userId),
     where("details.isShorts", "==", false),
-    where("details.status", "in", ["next", "watching"]),
+    where("details.status", "in", ["watch", "watching"]),
     orderBy("details.status"),
     orderBy("details.updatedAt", "desc"),
   );

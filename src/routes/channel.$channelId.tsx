@@ -192,7 +192,6 @@ function ChannelVideosPage() {
         setIsSaving(true);
         const loadingToast = toast.loading("Saving to database...");
         try {
-          allVideos[0].details.status = "next";
           const savedCount = await saveVideosToChannel(
             channelId,
             allVideos,

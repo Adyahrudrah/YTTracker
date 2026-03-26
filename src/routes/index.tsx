@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { auth, getFeedVideos } from "../services/firebase";
 import { useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { Loader2, History, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Save } from "lucide-react";
 import VideoCard from "#/components/VideoCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { YTVideo } from "#/types/yt";
@@ -47,9 +47,8 @@ function App() {
     );
   }
 
-  // Filter videos by status
-  const latestVideos =
-    feedVideos?.filter((v) => v.details.status === "next") || [];
+  const savedVideos =
+    feedVideos?.filter((v) => v.details.status === "watch") || [];
   const watchingVideos =
     feedVideos?.filter((v) => v.details.status === "watching") || [];
 
@@ -67,28 +66,28 @@ function App() {
           </Link>
         </div>
       ) : (
-        <Tabs defaultValue="latest" className="w-full">
+        <Tabs defaultValue="watching" className="w-full">
           <div className="flex justify-start mb-8">
             <TabsList className="grid w-full max-w-md grid-cols-2 ">
-              <TabsTrigger value="latest" className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4" /> Latest
-              </TabsTrigger>
               <TabsTrigger value="watching" className="flex items-center gap-2">
-                <History className="h-4 w-4" /> Watching
+                <Sparkles className="h-4 w-4" /> Watching
+              </TabsTrigger>
+              <TabsTrigger value="saved" className="flex items-center gap-2">
+                <Save className="h-4 w-4" /> Saved
               </TabsTrigger>
             </TabsList>
           </div>
 
-          <TabsContent value="latest" className="mt-0 outline-none">
+          <TabsContent value="watching" className="mt-0 outline-none">
             <VideoGrid
-              videos={latestVideos}
+              videos={watchingVideos}
               emptyMessage="No new videos in your feed."
             />
           </TabsContent>
 
-          <TabsContent value="watching" className="mt-0 outline-none">
+          <TabsContent value="saved" className="mt-0 outline-none">
             <VideoGrid
-              videos={watchingVideos}
+              videos={savedVideos}
               emptyMessage="You haven't started watching any videos yet."
             />
           </TabsContent>
