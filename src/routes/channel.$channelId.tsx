@@ -2,18 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { fetchChannelVideos } from "../services/youtube";
-import { Button } from "@/components/ui/button";
-import {
-  Loader2,
-  RefreshCw,
-  PlayCircle,
-  SortAsc,
-  LucideEye,
-  Search,
-} from "lucide-react";
+import { Loader2, PlayCircle, SortAsc, LucideEye, Search } from "lucide-react";
 import React, { useMemo, useEffect, useState, useDeferredValue } from "react";
 import { useInView } from "react-intersection-observer";
 import { toast } from "sonner";
@@ -36,6 +29,8 @@ import { parseISO8601ToSeconds } from "#/utils/base";
 import { Input } from "#/components/ui/input";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import type { YTVideo } from "#/types/yt";
+import PageFooter from "#/components/PageFooter";
+import { fbQueries } from "#/services/query-factory";
 
 const MemoizedVideoCard = React.memo(VideoCard);
 
@@ -57,6 +52,7 @@ function ChannelVideosPage() {
   const [shouldLoadAll, setShouldLoadAll] = useState(false);
   const [shouldLoadAllSaved, setShouldLoadAllSaved] = useState(false);
   const [query, setQuery] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const debouncedQuery = useDebounce(query, 300);
   const deferredQuery = useDeferredValue(debouncedQuery);
@@ -227,6 +223,64 @@ function ChannelVideosPage() {
     setIsTabEmptyOrSmall(currentList.length < 6);
   }, [currentList]);
 
+  const { data: isSaved } = useQuery(
+    fbQueries.isChannelExist(channelId, userId),
+  );
+
+  useEffect(() => {
+    const syncToFirebase = async () => {
+      if (
+        allVideos.length > 0 &&
+        !hasNextYtPage &&
+        !isFetchingYtNext &&
+        isFirebaseEmpty &&
+        !isLoadingYt &&
+        userId &&
+        isSaved &&
+        !isSaving
+      ) {
+        setIsSaving(true);
+        const loadingToast = toast.loading("Saving to database...");
+        try {
+          const savedCount = await saveVideosToChannel(
+            channelId,
+            allVideos,
+            existingIds,
+          );
+          toast.success(`Saved ${savedCount} new videos!`, {
+            id: loadingToast,
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["saved-videos-infinite", channelId],
+          });
+
+          queryClient.invalidateQueries({
+            queryKey: ["feed-videos", channelId],
+          });
+          setShouldLoadAll(false);
+        } catch (error) {
+          toast.error("Failed to save.", { id: loadingToast });
+        } finally {
+          setIsSaving(false);
+        }
+      }
+    };
+    syncToFirebase();
+  }, [
+    allVideos,
+    hasNextYtPage,
+    isFetchingYtNext,
+    isFirebaseEmpty,
+    isLoadingYt,
+    userId,
+    shouldLoadAll,
+    isSaved,
+    isSaving,
+    queryClient,
+    existingIds,
+    channelId,
+  ]);
+
   const { mutate: refreshForNew, isPending: isRefreshing } = useMutation({
     mutationFn: async () => {
       const latestVideoDate =
@@ -365,43 +419,18 @@ function ChannelVideosPage() {
         </div>
       </Tabs>
 
-      <footer className="max-w-7xl fixed bottom-24 left-1/2 -translate-x-1/2 w-full flex justify-center z-10 px-4">
-        {!isFirebaseEmpty ? (
-          <div className="flex flex-col md:flex-row gap-4 bg-background/80 backdrop-blur p-2 rounded-lg shadow-lg border">
-            {hasNextSavedPage && (
-              <Button
-                onClick={() => setShouldLoadAllSaved(true)}
-                size="sm"
-                disabled={
-                  isLoadingSaved || isFetchingSavedNext || shouldLoadAllSaved
-                }
-              >
-                <RefreshCw
-                  className={`mr-2 h-4 w-4 ${shouldLoadAllSaved ? "animate-spin" : ""}`}
-                />
-                Sync Full Channel
-              </Button>
-            )}
-            <Button
-              size="sm"
-              onClick={() => refreshForNew()}
-              disabled={isRefreshing}
-            >
-              <RefreshCw
-                className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-              />
-              Check for New
-            </Button>
-          </div>
-        ) : (
-          <Button onClick={() => setShouldLoadAll(true)} size="sm">
-            <RefreshCw
-              className={`mr-2 h-4 w-4 ${shouldLoadAll ? "animate-spin" : ""}`}
-            />{" "}
-            Sync Full Channel
-          </Button>
-        )}
-      </footer>
+      <PageFooter
+        isFirebaseEmpty={isFirebaseEmpty}
+        hasNextSavedPage={hasNextSavedPage}
+        isLoadingSaved={isLoadingSaved}
+        isFetchingSavedNext={isFetchingSavedNext}
+        shouldLoadAllSaved={shouldLoadAllSaved}
+        isRefreshing={isRefreshing}
+        shouldLoadAll={shouldLoadAll}
+        refreshForNew={refreshForNew}
+        setShouldLoadAllSaved={setShouldLoadAllSaved}
+        setShouldLoadAll={setShouldLoadAll}
+      />
     </div>
   );
 }
