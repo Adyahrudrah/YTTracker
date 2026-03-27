@@ -122,7 +122,7 @@ function VideoCard({ video }: VideoCardProps) {
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogChange}>
       <DialogTrigger asChild>
-        <Card className="group cursor-pointer overflow-hidden border-none bg-transparent hover:bg-accent/10 transition-colors duration-300">
+        <Card className="group cursor-pointer overflow-hidden border-none bg-transparent hover:bg-accent/10 transition-colors duration-300 h-88">
           <div className="relative aspect-video overflow-hidden rounded-xl bg-muted">
             {/* Action Buttons Row */}
             <div className="z-10 absolute top-2 right-2 flex gap-1.5">
@@ -218,7 +218,7 @@ function VideoCard({ video }: VideoCardProps) {
             </div>
           </div>
 
-          <CardContent className="px-1 py-3">
+          <CardContent className="px-1 py-4 ">
             <h3
               className={cn(
                 "font-semibold text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors",

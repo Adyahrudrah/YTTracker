@@ -39,7 +39,7 @@ function SavedChannelsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto pb-20 px-4">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Saved Channels</h1>
         {isFetching && (
