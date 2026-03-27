@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { auth, getFeedVideos } from "../services/firebase";
 import { useState, useEffect, useMemo } from "react";
@@ -110,9 +110,9 @@ function App() {
                     {videos.map((video) => (
                       <CarouselItem
                         key={video.snippet?.resourceId?.videoId || video.id}
-                        className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4"
+                        className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4 max-w-[80dvw]"
                       >
-                        <div className="p-1">
+                        <div className="p-1 ">
                           <VideoCard video={video} />
                         </div>
                       </CarouselItem>
