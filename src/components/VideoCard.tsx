@@ -1,30 +1,30 @@
-import { useState } from "react";
-import { Card, CardContent } from "./ui/card";
-import {
-  Play,
-  Eye,
-  Calendar,
-  ExternalLink,
-  CheckCircle,
-  RotateCcw,
-  X,
-  ListPlus,
-  ListMinus,
-} from "lucide-react";
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./ui/dialog";
-import { VideoPlayer } from "./VideoPlayer";
+import { cn } from "#/lib/utils";
+import { updateVideoProgress } from "#/services/firebase";
 import type { YTVideo, ytVideoStatus } from "#/types/yt";
 import {
   formatNumToShort,
   formatYouTubeDuration,
   openYtExt,
 } from "#/utils/base";
-import { formatDistanceToNow } from "date-fns";
-import { toast } from "sonner";
-import { updateVideoProgress } from "#/services/firebase";
 import { useQueryClient } from "@tanstack/react-query";
-import { cn } from "#/lib/utils";
 import { Link } from "@tanstack/react-router"; // Added for navigation
+import { formatDistanceToNow } from "date-fns";
+import {
+  Calendar,
+  CheckCircle,
+  ExternalLink,
+  Eye,
+  ListMinus,
+  ListPlus,
+  Play,
+  RotateCcw,
+  X,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Card, CardContent } from "./ui/card";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { VideoPlayer } from "./VideoPlayer";
 
 interface VideoCardProps {
   video: YTVideo;
@@ -255,7 +255,7 @@ function VideoCard({ video }: VideoCardProps) {
         </Card>
       </DialogTrigger>
 
-      <DialogContent className="p-0 bg-black md:min-w-4xl border-none overflow-hidden sm:rounded-2xl portrait:rotate-90 portrait:min-w-dvh portrait:max-h-dvw [&>button]:left-5 [&>button]:w-max">
+      <DialogContent className="p-0 bg-black md:min-w-4xl border-none overflow-hidden sm:rounded-2xl portrait:rotate-90 portrait:min-w-dvh portrait:max-h-dvw [&>button]:left-5 [&>button]:top-1/2 [&>button]:-translate-y-1/2 [&>button]:w-max">
         <DialogTitle className="sr-only">{snippet.title}</DialogTitle>
         {isOpen && (
           <div className="w-full h-full ">
