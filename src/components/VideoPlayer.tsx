@@ -25,7 +25,6 @@ export function VideoPlayer({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const playerRef = useRef<any>(null);
 
-  // Initialize state from localStorage or defaults
   const [currentSpeed, setCurrentSpeed] = useState(() => {
     const saved = localStorage.getItem("yt-player-speed");
     return saved ? parseFloat(saved) : 1;
@@ -60,8 +59,6 @@ export function VideoPlayer({
   const onPlayerReady: YouTubeProps["onReady"] = (event) => {
     const player = event.target;
     playerRef.current = player;
-
-    // Apply persisted settings on load
     player.setPlaybackRate(currentSpeed);
     player.setPlaybackQuality(currentQuality);
   };
@@ -86,7 +83,6 @@ export function VideoPlayer({
       playerRef.current.setPlaybackRate(speed);
       setCurrentSpeed(speed);
       localStorage.setItem("yt-player-speed", speed.toString());
-      toast.info(`Speed saved: ${speed}x`);
     }
   };
 
@@ -95,7 +91,6 @@ export function VideoPlayer({
       playerRef.current.setPlaybackQuality(quality);
       setCurrentQuality(quality);
       localStorage.setItem("yt-player-quality", quality);
-      toast.info(`Quality saved: ${quality}`);
     }
   };
 
@@ -110,51 +105,67 @@ export function VideoPlayer({
       autoplay: 1,
       start: Math.floor(startTime),
       rel: 0,
-      controls: 0,
+      controls: 1, // Restoring native controls for the player layout
     },
   };
 
   return (
-    <div className="group relative md:aspect-video portrait:h-dvw w-full overflow-hidden rounded-xl bg-black shadow-2xl">
-      <YouTube
-        videoId={videoId}
-        opts={opts}
-        onReady={onPlayerReady}
-        onStateChange={onPlayerStateChange}
-        className="h-full w-full"
-      />
+    <div className="flex flex-col gap-4 w-full">
+      {/* Video Container - Layout remains unchanged */}
+      <div className="md:aspect-video portrait:h-[80dvw] w-full overflow-hidden rounded-xl bg-black shadow-2xl">
+        <YouTube
+          videoId={videoId}
+          opts={opts}
+          onReady={onPlayerReady}
+          onStateChange={onPlayerStateChange}
+          className="h-full w-full"
+        />
+      </div>
 
-      <div className="absolute inset-x-0 bottom-0 flex flex-col gap-4 bg-linear-to-t from-black/90 via-black/40 to-transparent p-6 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Gauge className="h-4 w-4 text-white/70" />
+      {/* External Controls Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-secondary/50 border border-border">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-2 py-1 bg-background rounded-lg border border-border">
+            <Gauge className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-tight">
+              Speed
+            </span>
+          </div>
+          <div className="flex gap-1">
             {[1, 1.25, 1.5, 2].map((speed) => (
               <button
-                type="button"
                 key={speed}
+                onTouchStart={() => updateSpeed(speed)}
                 onClick={() => updateSpeed(speed)}
-                className={`rounded px-3 py-1 text-xs font-medium transition-all ${
+                className={`rounded-md px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
                   currentSpeed === speed
-                    ? "bg-white text-black scale-105 shadow-lg"
-                    : "bg-white/10 text-white hover:bg-white/20"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-background hover:bg-accent text-foreground"
                 }`}
               >
                 {speed}x
               </button>
             ))}
           </div>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <Settings className="h-4 w-4 text-white/70" />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-2 py-1 bg-background rounded-lg border border-border">
+            <Settings className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-tight">
+              Quality
+            </span>
+          </div>
+          <div className="flex gap-1">
             {["hd1080", "hd720", "medium", "small"].map((quality) => (
               <button
-                type="button"
                 key={quality}
+                onTouchStart={() => updateQuality(quality)}
                 onClick={() => updateQuality(quality)}
-                className={`rounded px-3 py-1 text-xs font-medium uppercase transition-all ${
+                className={`rounded-md px-3 py-1.5 text-xs font-bold uppercase transition-all active:scale-95 ${
                   currentQuality === quality
-                    ? "bg-white text-black scale-105 shadow-lg"
-                    : "bg-white/10 text-white hover:bg-white/20"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-background hover:bg-accent text-foreground"
                 }`}
               >
                 {quality.replace("hd", "")}
