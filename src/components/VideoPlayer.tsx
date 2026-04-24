@@ -134,6 +134,7 @@ export function VideoPlayer({
           <div className="flex gap-1">
             {[1, 1.25, 1.5, 2].map((speed) => (
               <button
+                type="button"
                 key={speed}
                 onTouchStart={() => updateSpeed(speed)}
                 onClick={() => updateSpeed(speed)}
@@ -159,6 +160,7 @@ export function VideoPlayer({
           <div className="flex gap-1">
             {["hd1080", "hd720", "medium", "small"].map((quality) => (
               <button
+                type="button"
                 key={quality}
                 onTouchStart={() => updateQuality(quality)}
                 onClick={() => updateQuality(quality)}
