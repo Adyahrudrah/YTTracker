@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { User as UserIcon, Home, Bookmark, LogOut } from "lucide-react";
-import { type User } from "firebase/auth";
-import { logout } from "../services/firebase";
+import type { User } from "firebase/auth";
+import { Bookmark, Home, LogOut, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -10,7 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+import { logout } from "../services/firebase";
 
 export default function BottomNav({ user }: { user: User }) {
   const handleLogout = async () => {
@@ -33,15 +33,21 @@ export default function BottomNav({ user }: { user: User }) {
           <Link
             key={to}
             to={to}
-            className="flex flex-col items-center justify-center flex-1 h-full gap-1 text-muted-foreground transition-colors [&.active]:text-primary"
+            className="flex flex-col items-center justify-center flex-1 h-full gap-1 text-muted-foreground transition-colors"
             activeProps={{ className: "text-primary" }}
           >
-            <Icon className="h-5 w-5" />
-            <span className="text-[10px] font-medium">{label}</span>
+            {({ isActive }) => (
+              <>
+                <Icon
+                  className="h-5 w-5 transition-all"
+                  fill={isActive ? "currentColor" : "none"}
+                />
+                <span className="text-[10px] font-medium">{label}</span>
+              </>
+            )}
           </Link>
         ))}
 
-        {/* Profile Trigger */}
         {user && (
           <Sheet>
             <SheetTrigger className="flex flex-col items-center justify-center flex-1 h-full gap-1 text-muted-foreground">
