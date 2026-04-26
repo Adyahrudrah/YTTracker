@@ -117,7 +117,15 @@ export function VideoPlayer({
       start: Math.floor(startTime),
       rel: 0,
       controls: 1,
+      cc_load_policy: 0,
     },
+  };
+
+  const onPlaybackQualityChange: YouTubeProps["onPlaybackQualityChange"] = (
+    event,
+  ) => {
+    const newQuality = event.data;
+    console.log("Quality changed to:", newQuality);
   };
 
   return (
@@ -133,6 +141,7 @@ export function VideoPlayer({
           opts={opts}
           onReady={onPlayerReady}
           onStateChange={onPlayerStateChange}
+          onPlaybackQualityChange={onPlaybackQualityChange}
           className="h-full w-full"
         />
       </div>
