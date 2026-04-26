@@ -64,8 +64,8 @@ export const fetchChannels = async (query: string): Promise<YTChannel[]> => {
 
   return channels.sort(
     (a, b) =>
-      (parseInt(b.statistics.subscriberCount) || 0) -
-      (parseInt(a.statistics.subscriberCount) || 0),
+      (parseInt(b.statistics.subscriberCount, 10) || 0) -
+      (parseInt(a.statistics.subscriberCount, 10) || 0),
   );
 };
 

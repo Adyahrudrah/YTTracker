@@ -1,4 +1,4 @@
-import { Gauge, Settings } from "lucide-react";
+import { Gauge } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import YouTube, { type YouTubeProps } from "react-youtube";
 import { toast } from "sonner";
@@ -23,15 +23,13 @@ export function VideoPlayer({
   onProgress,
 }: VideoPlayerProps) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerRef = useRef<any>(null);
 
+  const [showControls, setShowControls] = useState(true);
   const [currentSpeed, setCurrentSpeed] = useState(() => {
     const saved = localStorage.getItem("yt-player-speed");
     return saved ? parseFloat(saved) : 1;
-  });
-
-  const [currentQuality, setCurrentQuality] = useState(() => {
-    return localStorage.getItem("yt-player-quality") || "default";
   });
 
   const clearTimer = useCallback(() => {
@@ -39,6 +37,16 @@ export function VideoPlayer({
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+  }, []);
+
+  const resetHideTimer = useCallback(() => {
+    setShowControls(true);
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+    }
+    hideTimerRef.current = setTimeout(() => {
+      setShowControls(false);
+    }, 3000);
   }, []);
 
   const startTracking = (player: any) => {
@@ -60,7 +68,7 @@ export function VideoPlayer({
     const player = event.target;
     playerRef.current = player;
     player.setPlaybackRate(currentSpeed);
-    player.setPlaybackQuality(currentQuality);
+    resetHideTimer();
   };
 
   const onPlayerStateChange: YouTubeProps["onStateChange"] = (event) => {
@@ -73,8 +81,14 @@ export function VideoPlayer({
     const currentState = states[event.data];
 
     if (currentState) onStateChange?.(currentState);
-    if (event.data === 1) startTracking(player);
-    else clearTimer();
+    if (event.data === 1) {
+      startTracking(player);
+      resetHideTimer();
+    } else {
+      clearTimer();
+      setShowControls(true);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    }
     if (event.data === 0) toast.success("Video finished!");
   };
 
@@ -83,20 +97,17 @@ export function VideoPlayer({
       playerRef.current.setPlaybackRate(speed);
       setCurrentSpeed(speed);
       localStorage.setItem("yt-player-speed", speed.toString());
-    }
-  };
-
-  const updateQuality = (quality: string) => {
-    if (playerRef.current) {
-      playerRef.current.setPlaybackQuality(quality);
-      setCurrentQuality(quality);
-      localStorage.setItem("yt-player-quality", quality);
+      resetHideTimer();
     }
   };
 
   useEffect(() => {
-    return () => clearTimer();
-  }, [clearTimer]);
+    resetHideTimer();
+    return () => {
+      clearTimer();
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [clearTimer, resetHideTimer]);
 
   const opts: YouTubeProps["opts"] = {
     height: "100%",
@@ -105,14 +116,18 @@ export function VideoPlayer({
       autoplay: 1,
       start: Math.floor(startTime),
       rel: 0,
-      controls: 1, // Restoring native controls for the player layout
+      controls: 1,
     },
   };
 
   return (
-    <div className="flex flex-col gap-4 w-full">
-      {/* Video Container - Layout remains unchanged */}
-      <div className="md:aspect-video portrait:h-[80dvw] w-full overflow-hidden rounded-xl bg-black shadow-2xl">
+    <button
+      type="button"
+      className="flex flex-col gap-4 w-full transition-opacity duration-300"
+      onTouchStart={resetHideTimer}
+      onMouseMove={resetHideTimer}
+    >
+      <div className="md:aspect-video portrait:h-dvw w-full overflow-hidden rounded-xl bg-black shadow-2xl">
         <YouTube
           videoId={videoId}
           opts={opts}
@@ -122,8 +137,13 @@ export function VideoPlayer({
         />
       </div>
 
-      {/* External Controls Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-secondary/50 border border-border">
+      <div
+        className={`absolute top-2 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-background border border-border transition-all duration-500 ${
+          showControls
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-4 pointer-events-none"
+        }`}
+      >
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-2 py-1 bg-background rounded-lg border border-border">
             <Gauge className="h-4 w-4 text-muted-foreground" />
@@ -136,7 +156,6 @@ export function VideoPlayer({
               <button
                 type="button"
                 key={speed}
-                onTouchStart={() => updateSpeed(speed)}
                 onClick={() => updateSpeed(speed)}
                 className={`rounded-md px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
                   currentSpeed === speed
@@ -149,33 +168,7 @@ export function VideoPlayer({
             ))}
           </div>
         </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-2 py-1 bg-background rounded-lg border border-border">
-            <Settings className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-tight">
-              Quality
-            </span>
-          </div>
-          <div className="flex gap-1">
-            {["hd1080", "hd720", "medium", "small"].map((quality) => (
-              <button
-                type="button"
-                key={quality}
-                onTouchStart={() => updateQuality(quality)}
-                onClick={() => updateQuality(quality)}
-                className={`rounded-md px-3 py-1.5 text-xs font-bold uppercase transition-all active:scale-95 ${
-                  currentQuality === quality
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-background hover:bg-accent text-foreground"
-                }`}
-              >
-                {quality.replace("hd", "")}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
-    </div>
+    </button>
   );
 }
