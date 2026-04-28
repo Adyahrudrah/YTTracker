@@ -147,7 +147,7 @@ export function VideoPlayer({
       </div>
 
       <div
-        className={`absolute top-2 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-background border border-border transition-all duration-500 ${
+        className={`absolute bottom-2 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-background border border-border transition-all duration-500 ${
           showControls
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-4 pointer-events-none"
