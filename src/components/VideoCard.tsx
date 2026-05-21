@@ -1,11 +1,3 @@
-import { cn } from "#/lib/utils";
-import { updateVideoProgress } from "#/services/firebase";
-import type { YTVideo, ytVideoStatus } from "#/types/yt";
-import {
-  formatNumToShort,
-  formatYouTubeDuration,
-  openYtExt,
-} from "#/utils/base";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router"; // Added for navigation
 import { formatDistanceToNow } from "date-fns";
@@ -22,6 +14,14 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { cn } from "#/lib/utils";
+import { updateVideoProgress } from "#/services/firebase";
+import type { YTVideo, ytVideoStatus } from "#/types/yt";
+import {
+  formatNumToShort,
+  formatYouTubeDuration,
+  openYtExt,
+} from "#/utils/base";
 import { Card, CardContent } from "./ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { VideoPlayer } from "./VideoPlayer";
@@ -130,7 +130,7 @@ function VideoCard({ video }: VideoCardProps) {
               {hasProgress && (
                 <button
                   onClick={handleDismissProgress}
-                  className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white shadow-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all hover:bg-destructive"
+                  className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white shadow-lg opacity-100 xl:opacity-0 xl:group-hover:opacity-100 transition-all hover:bg-destructive"
                   title="Clear progress"
                 >
                   <X className="h-4 w-4" />
@@ -139,7 +139,7 @@ function VideoCard({ video }: VideoCardProps) {
 
               <button
                 onClick={handleToggleWatchList}
-                className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white shadow-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all hover:bg-foreground hover:text-accent"
+                className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white shadow-lg opacity-100 xl:opacity-0 xl:group-hover:opacity-100 transition-all hover:bg-foreground hover:text-accent"
                 title={!isInList ? "Add to WatchList" : "Remove from WatchList"}
               >
                 {!isInList ? (
@@ -158,7 +158,7 @@ function VideoCard({ video }: VideoCardProps) {
                     details?.lastPlayed,
                   );
                 }}
-                className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white shadow-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity hover:bg-primary"
+                className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white shadow-lg opacity-100 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity hover:bg-primary"
                 title="Open in YouTube"
               >
                 <ExternalLink className="h-4 w-4" />
@@ -169,9 +169,9 @@ function VideoCard({ video }: VideoCardProps) {
                 onClick={handleToggleWatched}
                 className={cn(
                   "p-2 backdrop-blur-md rounded-full text-white transition-all shadow-lg active:scale-90",
-                  "opacity-100 lg:opacity-0 lg:group-hover:opacity-100",
+                  "opacity-100 xl:opacity-0 xl:group-hover:opacity-100",
                   isFullyWatched
-                    ? "bg-green-600 lg:opacity-100"
+                    ? "bg-green-600 xl:opacity-100"
                     : "bg-black/60 hover:bg-green-600",
                 )}
                 title={isFullyWatched ? "Mark as unwatched" : "Mark as watched"}
@@ -190,7 +190,7 @@ function VideoCard({ video }: VideoCardProps) {
               }
               alt={snippet.title}
               className={cn(
-                "object-cover w-full h-full transition-all duration-500 lg:group-hover:scale-105",
+                "object-cover w-full h-full transition-all duration-500 xl:group-hover:scale-105",
                 isFullyWatched && "opacity-50 grayscale-[0.5]",
               )}
             />
@@ -207,7 +207,7 @@ function VideoCard({ video }: VideoCardProps) {
               </div>
             )}
 
-            <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300">
+            <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 xl:group-hover:opacity-100 transition-opacity duration-300">
               <div className="bg-primary/90 p-3 rounded-full shadow-xl">
                 <Play className="text-primary-foreground h-6 w-6 fill-current" />
               </div>

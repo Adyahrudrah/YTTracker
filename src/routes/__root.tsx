@@ -1,7 +1,7 @@
 import {
+  createRootRouteWithContext,
   HeadContent,
   Scripts,
-  createRootRouteWithContext,
 } from "@tanstack/react-router";
 // import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 // import { TanStackDevtools } from "@tanstack/react-devtools";
@@ -11,14 +11,13 @@ import TanStackQueryProvider from "../integrations/tanstack-query/root-provider"
 
 // import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
-import appCss from "../styles.css?url";
-
 import type { QueryClient } from "@tanstack/react-query";
+import { onAuthStateChanged, type User } from "firebase/auth";
+import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import MobileAside from "#/components/Footer";
-import { useEffect, useState } from "react";
-import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "#/services/firebase";
+import appCss from "../styles.css?url";
 
 interface MyRouterContext {
   queryClient: QueryClient;
@@ -74,26 +73,23 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="font-sans antialiased wrap-anywhere selection:bg-[rgba(79,184,178,0.24)]">
         <TanStackQueryProvider>
-          {user && <Header />}
-          {children}
-          {user && (
-            <div className="fixed bottom-0 left-0 right-0 z-50 ">
-              <MobileAside user={user} />
-            </div>
-          )}
+          {/* This layout container locks the viewport structure */}
+          <div className="flex h-screen flex-col overflow-hidden">
+            {/* Header stays pinned naturally */}
+            {user && <Header />}
 
-          {/* <TanStackDevtools
-            config={{
-              position: "bottom-right",
-            }}
-            plugins={[
-              {
-                name: "Tanstack Router",
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              TanStackQueryDevtools,
-            ]}
-          /> */}
+            {/* Scroll container: Only the main content scrolls */}
+            <main className="flex-1 overflow-y-auto min-h-0 [webkit-overflow-scrolling:touch]">
+              {children}
+            </main>
+
+            {/* Footer stays structurally at the bottom, no 'fixed' issues */}
+            {user && (
+              <div className="z-50 shrink-0">
+                <MobileAside user={user} />
+              </div>
+            )}
+          </div>
         </TanStackQueryProvider>
         <Toaster position="top-center" richColors theme="system" />
         <Scripts />
